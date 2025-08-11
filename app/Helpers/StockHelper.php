@@ -50,4 +50,40 @@ class StockHelper
 
         return $price_per_carton / $lines_per_carton;
     }
+
+
+    // Sum array of C/L formatted strings into one total
+    public static function sumCartonLine($formatted)
+    {
+        $totalCartons = 0;
+        $totalLines = 0;
+
+        $parts = explode('+', str_replace(' ', '', $formatted));
+        foreach ($parts as $part) {
+            preg_match_all('/(\d+)(C|L)/', $part, $matches, PREG_SET_ORDER);
+            foreach ($matches as $match) {
+                if ($match[2] === 'C') {
+                    $totalCartons += (int)$match[1];
+                } elseif ($match[2] === 'L') {
+                    $totalLines += (int)$match[1];
+                }
+            }
+            if (preg_match('/^\d+$/', $part)) {
+                $totalCartons += (int)$part;
+            }
+        }
+
+        $result = '';
+        if ($totalCartons > 0) {
+            $result .= $totalCartons . 'C';
+        }
+        if ($totalLines > 0) {
+            if ($result) {
+                $result .= ' ';
+            }
+            $result .= $totalLines . 'L';
+        }
+
+        return $result ?: '0';
+    }
 }

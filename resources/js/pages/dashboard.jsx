@@ -48,13 +48,13 @@ function Dashboard({
             icon: DollarSign,
             color: 'text-green-600',
         },
-        {
-            title: 'Products Sold',
-            value: productsSoldToday.toString(),
-            change: (productsChange >= 0 ? '+' : '') + productsChange.toFixed(1) + '%',
-            icon: ShoppingCart,
-            color: 'text-blue-600',
-        },
+        // {
+        //     title: 'Products Sold',
+        //     value: productsSoldToday.toString(),
+        //     change: (productsChange >= 0 ? '+' : '') + productsChange.toFixed(1) + '%',
+        //     icon: ShoppingCart,
+        //     color: 'text-blue-600',
+        // },
         {
             title: 'Low Stock Items',
             value: lowStockItems.toString(),
