@@ -3,7 +3,7 @@ import ToastProvider from '@/components/ToastProvider';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Link } from '@inertiajs/react';
-import { ChevronRight, Menu } from 'lucide-react';
+import { ChevronRight, LogOut, Menu } from 'lucide-react';
 import { useState } from 'react';
 
 export default function AppLayout({ children, breadcrumbs = [] }) {
@@ -38,7 +38,7 @@ export default function AppLayout({ children, breadcrumbs = [] }) {
                             </Button>
 
                             {/* Breadcrumbs */}
-                            <nav className="flex" aria-label="Breadcrumb">
+                            <nav className="flex flex-1" aria-label="Breadcrumb">
                                 <ol className="flex items-center space-x-4">
                                     {breadcrumbs.map((crumb, index) => (
                                         <li key={index}>
@@ -56,6 +56,17 @@ export default function AppLayout({ children, breadcrumbs = [] }) {
                                     ))}
                                 </ol>
                             </nav>
+
+                            {/* Logout */}
+                            <Link
+                                href={route('logout')}
+                                method="post"
+                                as="button"
+                                className="flex cursor-pointer items-center gap-1 text-sm font-medium text-red-600 hover:text-red-800"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                Logout
+                            </Link>
                         </div>
 
                         {/* Page content */}
