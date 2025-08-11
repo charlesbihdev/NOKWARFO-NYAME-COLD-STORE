@@ -19,11 +19,11 @@ use App\Http\Controllers\SalesTransactionController;
 // use App\Http\Controllers\ProductManagementController;
 
 Route::get('/', function () {
-    return redirect()->route('dashboard.index');
+    return redirect()->route('login');
 })->name('home');
 
 Route::get('/home', function () {
-    return redirect()->route('dashboard');
+    return redirect()->route('dashboard.index');
 })->name('dashboard');
 
 Route::middleware('auth')->group(function () {
