@@ -1,1 +1,0 @@
-import{r as o,j as a}from"./app-D2J-B9oG.js";const p=o.forwardRef(({message:r,className:t="",...s},e)=>r?a.jsx("p",{...s,className:"text-sm text-red-600 "+t,ref:e,children:r}):null);p.displayName="InputError";export{p as I};
