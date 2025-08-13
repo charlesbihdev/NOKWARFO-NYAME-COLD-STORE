@@ -43,11 +43,12 @@ function Dashboard({
     const stats = [
         {
             title: "Today's Sales",
-            value: 'GH₵' + todaySales.toFixed(2),
-            change: (salesChange >= 0 ? '+' : '') + salesChange.toFixed(1) + '%',
+            value: 'GH₵' + Number(todaySales || 0).toFixed(2),
+            change: (Number(salesChange) >= 0 ? '+' : '') + Number(salesChange || 0).toFixed(1) + '%',
             icon: DollarSign,
             color: 'text-green-600',
         },
+
         // {
         //     title: 'Products Sold',
         //     value: productsSoldToday.toString(),
