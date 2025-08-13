@@ -193,7 +193,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                         {productErrors.category && <InputError message={productErrors.category} className="mt-2" />}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
+                                {/* <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="supplier" className="text-right">
                                         Supplier *
                                     </Label>
@@ -216,7 +216,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                         </Select>
                                         {productErrors.supplier_id && <InputError message={productErrors.supplier_id} className="mt-2" />}
                                     </div>
-                                </div>
+                                </div> */}
                                 <Button type="submit" disabled={productProcessing}>
                                     Add Product
                                 </Button>
@@ -301,7 +301,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                     {productErrors.category && <InputError message={productErrors.category} className="mt-2" />}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
+                            {/* <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-supplier" className="text-right">
                                     Supplier *
                                 </Label>
@@ -320,7 +320,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                     </Select>
                                     {productErrors.supplier_id && <InputError message={productErrors.supplier_id} className="mt-2" />}
                                 </div>
-                            </div>
+                            </div> */}
                             <Button type="submit" disabled={productProcessing}>
                                 Update Product
                             </Button>
