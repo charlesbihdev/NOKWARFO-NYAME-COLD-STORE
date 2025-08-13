@@ -343,7 +343,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                     <TableHead>Product Name</TableHead>
                                     <TableHead>Lines per Carton</TableHead>
                                     <TableHead>Category</TableHead>
-                                    <TableHead>Supplier</TableHead>
+                                    {/* <TableHead>Supplier</TableHead> */}
                                     <TableHead>Status</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
@@ -354,7 +354,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                         <TableCell className="font-medium">{product.name}</TableCell>
                                         <TableCell>{product.lines_per_carton}</TableCell>
                                         <TableCell>{product.category}</TableCell>
-                                        <TableCell>{product.supplier?.name || 'N/A'}</TableCell>
+                                        {/* <TableCell>{product.supplier?.name || 'N/A'}</TableCell> */}
                                         <TableCell>
                                             <Badge variant={product.is_active ? 'default' : 'secondary'}>
                                                 {product.is_active ? 'Active' : 'Inactive'}
