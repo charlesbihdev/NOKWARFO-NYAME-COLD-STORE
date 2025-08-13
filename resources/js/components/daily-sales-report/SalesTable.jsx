@@ -50,7 +50,7 @@ export default function SalesTable({ title, sales, amountTotal, amountColor, onP
                                     <TableCell>{sale.time}</TableCell>
                                     <TableCell className="font-medium">{sale.customer}</TableCell>
                                     <TableCell>{sale.products}</TableCell>
-                                    <TableCell className="font-medium">GH₵{parseFloat(sale.amount).toFixed(2)}</TableCell>
+                                    <TableCell className="font-medium">GH₵{Number(sale.amount || 0).toFixed(2)}</TableCell>
                                 </TableRow>
                             ))
                         )}
@@ -58,7 +58,7 @@ export default function SalesTable({ title, sales, amountTotal, amountColor, onP
                             <TableCell colSpan={3} className="font-bold">
                                 Total {title}
                             </TableCell>
-                            <TableCell className={`font-bold ${amountColor}`}>GH₵{amountTotal.toFixed(2)}</TableCell>
+                            <TableCell className={`font-bold ${amountColor}`}>GH₵{Number(amountTotal || 0).toFixed(2)}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

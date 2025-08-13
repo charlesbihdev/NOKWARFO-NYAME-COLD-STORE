@@ -58,10 +58,9 @@ export default function ProductsTable({
                                 <TableRow key={idx}>
                                     <TableCell className="font-medium">{item.product}</TableCell>
                                     <TableCell>{item.qty}</TableCell>
-                                    <TableCell className="font-medium">GH₵{parseFloat(item.total_amount).toFixed(2)}</TableCell>
-                                    {showAmountPaid && (
-                                        <TableCell className="font-medium">GH₵{parseFloat(item.amount_paid || 0).toFixed(2)}</TableCell>
-                                    )}
+                                    <TableCell className="font-medium">GH₵{Number(item.total_amount || 0).toFixed(2)}</TableCell>
+
+                                    {showAmountPaid && <TableCell className="font-medium">GH₵{Number(item.amount_paid || 0).toFixed(2)}</TableCell>}
                                 </TableRow>
                             ))
                         )}
@@ -72,8 +71,11 @@ export default function ProductsTable({
                         >
                             <TableCell className="font-bold">Total Products</TableCell>
                             <TableCell className="font-bold">{totalQty}</TableCell>
-                            <TableCell className={`font-bold ${totalAmountColor}`}>GH₵{totalAmount.toFixed(2)}</TableCell>
-                            {showAmountPaid && <TableCell className="font-bold text-green-600">GH₵{totalAmountPaid.toFixed(2)}</TableCell>}
+                            <TableCell className={`font-bold ${totalAmountColor}`}>GH₵{Number(totalAmount || 0).toFixed(2)}</TableCell>
+
+                            {showAmountPaid && (
+                                <TableCell className="font-bold text-green-600">GH₵{Number(totalAmountPaid || 0).toFixed(2)}</TableCell>
+                            )}
                         </TableRow>
                     </TableBody>
                 </Table>
