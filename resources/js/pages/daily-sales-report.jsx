@@ -73,28 +73,31 @@ export default function DailySalesReport({
                     <SummaryCard
                         title="Cash Sales"
                         icon={DollarSign}
-                        amount={`GH₵${summary.cashTotal.toFixed(2)}`}
-                        subtitle={`${cash_sales.data.length} transactions`}
+                        amount={`GH₵${Number(summary.cashTotal || 0).toFixed(2)}`}
+                        subtitle={`${Number(cash_sales?.data?.length || 0)} transactions`}
                         color="text-green-600"
                     />
+
                     <SummaryCard
                         title="Credit Sales"
                         icon={Package}
-                        amount={`GH₵${summary.creditTotal.toFixed(2)}`}
-                        subtitle={`${credit_sales.data.length} transactions`}
+                        amount={`GH₵${Number(summary.creditTotal || 0).toFixed(2)}`}
+                        subtitle={`${Number(credit_sales?.data?.length || 0)} transactions`}
                         color="text-orange-600"
                     />
+
                     <SummaryCard
                         title="Grand Total"
                         icon={Calendar}
-                        amount={`GH₵${summary.grandTotal.toFixed(2)}`}
+                        amount={`GH₵${Number(summary.grandTotal || 0).toFixed(2)}`}
                         subtitle="Cash + Credit"
                         color="text-blue-600"
                     />
+
                     <SummaryCard
                         title="Products Sold"
                         icon={Package}
-                        amount={summary.totalProductsSold}
+                        amount={Number(summary.totalProductsSold || 0)}
                         subtitle="Total units"
                         color="text-purple-600"
                     />
