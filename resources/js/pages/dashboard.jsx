@@ -78,6 +78,8 @@ function Dashboard({
         },
     ];
 
+    console.log(stats);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <div className="min-h-screen space-y-6 bg-gray-100 p-6">
