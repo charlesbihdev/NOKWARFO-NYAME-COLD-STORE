@@ -160,3 +160,4 @@ export default function EditStockModal({ isOpen, onClose, stockMovement, data, s
     );
 }
 
+
