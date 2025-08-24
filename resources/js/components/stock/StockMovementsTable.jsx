@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Edit } from 'lucide-react';
+import { Truck, Edit, Trash2 } from 'lucide-react';
 
 export default function StockMovementsTable({ stock_movements, onDelete, onEdit }) {
     return (
@@ -38,12 +38,16 @@ export default function StockMovementsTable({ stock_movements, onDelete, onEdit 
                                     <TableCell>GH₵{parseFloat(movement.total_cost).toFixed(2)}</TableCell>
                                     <TableCell>{movement.notes}</TableCell>
                                     <TableCell>
-                                        <Button variant="outline" size="sm" onClick={() => onEdit(movement.id)}>
-                                            Edit
-                                        </Button>
-                                        <Button variant="outline" size="sm" onClick={() => onDelete(movement.id)}>
-                                            Delete
-                                        </Button>
+                                        <div className="flex space-x-2">
+                                            <Button variant="outline" size="sm" onClick={() => onEdit(movement)}>
+                                                <Edit className="h-4 w-4 mr-1" />
+                                                Edit
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => onDelete(movement.id)}>
+                                                <Trash2 className="h-4 w-4 mr-1" />
+                                                Delete
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

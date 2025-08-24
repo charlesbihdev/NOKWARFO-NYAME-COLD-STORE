@@ -4,13 +4,16 @@ import { useState } from 'react';
 import DateRangePicker from '../components/DateRangePicker';
 
 import AddStockModal from '../components/stock/AddStockModal';
+import EditStockMovementModal from '../components/stock/EditStockMovementModal';
 import InventoryTable from '../components/stock/InventoryTable';
 import StockActivitySummary from '../components/stock/StockActivitySummary';
 import StockMovementsTable from '../components/stock/StockMovementsTable';
 
 export default function StockControl({ stock_movements = [], products = [], suppliers = [], stock_activity_summary = [], date }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [editingStockMovement, setEditingStockMovement] = useState(null);
     const { data, setData, post, processing, errors, reset } = useForm({
         product_id: '',
         supplier_id: '',
@@ -61,8 +64,9 @@ export default function StockControl({ stock_movements = [], products = [], supp
         }
     }
 
-    function handleEditStockMovement(id) {
-        router.visit(route('stock-control.edit', id));
+    function handleEditStockMovement(stockMovement) {
+        setEditingStockMovement(stockMovement);
+        setIsEditModalOpen(true);
     }
 
     const handleDateRangeChange = (value, type) => {
@@ -107,6 +111,18 @@ export default function StockControl({ stock_movements = [], products = [], supp
                     errors={errors}
                     processing={processing}
                     onSubmit={handleAddStock}
+                />
+
+                <EditStockMovementModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setEditingStockMovement(null);
+                    }}
+                    stockMovement={editingStockMovement}
+                    products={products}
+                    suppliers={suppliers}
+                    errors={errors}
                 />
 
                 <StockMovementsTable stock_movements={stock_movements} onDelete={handleDeleteStockMovement} onEdit={handleEditStockMovement} />

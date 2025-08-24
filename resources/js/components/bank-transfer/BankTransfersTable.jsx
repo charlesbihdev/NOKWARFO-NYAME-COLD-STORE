@@ -1,10 +1,22 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Banknote, Trash2 } from 'lucide-react';
 
 export default function BankTransfersTable({ bankTransfers, onDeleteClick }) {
+    const { start_date, end_date } = usePage().props;
+
+    // Helper function to build pagination URLs with date parameters
+    const buildPaginationUrl = (url) => {
+        if (!url) return '#';
+        
+        const urlObj = new URL(url);
+        urlObj.searchParams.set('start_date', start_date || '');
+        urlObj.searchParams.set('end_date', end_date || '');
+        return urlObj.toString();
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -57,7 +69,7 @@ export default function BankTransfersTable({ bankTransfers, onDeleteClick }) {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={9} className="text-muted-foreground text-center">
-                                    No bank transfers recorded yet
+                                    No bank transfers recorded for the selected date range
                                 </TableCell>
                             </TableRow>
                         )}
@@ -65,13 +77,23 @@ export default function BankTransfersTable({ bankTransfers, onDeleteClick }) {
                 </Table>
                 <div className="my-3 flex items-center justify-center gap-4">
                     {bankTransfers.prev_page_url && (
-                        <Link preserveScroll preserveState href={bankTransfers.prev_page_url} className="rounded border px-4 py-2 hover:bg-gray-100">
+                        <Link 
+                            preserveScroll 
+                            preserveState 
+                            href={buildPaginationUrl(bankTransfers.prev_page_url)} 
+                            className="rounded border px-4 py-2 hover:bg-gray-100"
+                        >
                             « Previous
                         </Link>
                     )}
                     <span className="px-4 py-2 font-medium">Page {bankTransfers.current_page}</span>
                     {bankTransfers.next_page_url && (
-                        <Link preserveScroll preserveState href={bankTransfers.next_page_url} className="rounded border px-4 py-2 hover:bg-gray-100">
+                        <Link 
+                            preserveScroll 
+                            preserveState 
+                            href={buildPaginationUrl(bankTransfers.next_page_url)} 
+                            className="rounded border px-4 py-2 hover:bg-gray-100"
+                        >
                             Next »
                         </Link>
                     )}

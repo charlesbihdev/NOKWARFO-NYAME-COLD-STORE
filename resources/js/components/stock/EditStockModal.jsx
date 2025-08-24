@@ -90,6 +90,7 @@ export default function EditStockModal({ isOpen, onClose, stockMovement, data, s
                                 onChange={(e) => setData('type', e.target.value)}
                                 required
                                 className="w-full rounded border px-2 py-1"
+                                disabled
                             >
                                 <option value="received">Stock In</option>
                                 <option value="sold">Stock Out</option>

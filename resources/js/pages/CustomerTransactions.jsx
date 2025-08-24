@@ -250,8 +250,11 @@ export default function CustomerTransactions({ customer, transactions }) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge 
-                                                        variant={transaction.type === 'debt' ? 'destructive' : 'default'}
-                                                        className="capitalize"
+                                                        className={`capitalize ${
+                                                            transaction.type === 'debt' 
+                                                                ? 'bg-red-600 text-white hover:bg-red-700' 
+                                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                                        }`}
                                                     >
                                                         {transaction.type === 'debt' ? (
                                                             <>

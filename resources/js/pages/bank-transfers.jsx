@@ -2,14 +2,45 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 
 import AppLayout from '@/layouts/app-layout';
+import DateRangePicker from '../components/DateRangePicker';
 import BankTransferForm from '../components/bank-transfer/BankTransferForm';
 import BankTransfersTable from '../components/bank-transfer/BankTransfersTable';
 import DeleteConfirmDialog from '../components/bank-transfer/DeleteConfirmDialog';
 import TagCreationForm from '../components/bank-transfer/TagCreationForm';
 
-export default function BankTransfers({ bank_transfers = [], tags = [], last_balance = 0 }) {
+export default function BankTransfers({ 
+    bank_transfers = [], 
+    tags = [], 
+    last_balance = 0,
+    start_date = '',
+    end_date = ''
+}) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [deleteTransferId, setDeleteTransferId] = useState(null);
+    
+    // Default to today if no dates provided
+    const today = new Date().toISOString().slice(0, 10);
+    const [startDate, setStartDate] = useState(start_date || today);
+    const [endDate, setEndDate] = useState(end_date || today);
+
+    // Handle date changes - reset page params to 1 on new date filter
+    const handleDateChange = (value, type) => {
+        const newStartDate = type === 'start' ? value : startDate;
+        const newEndDate = type === 'end' ? value : endDate;
+
+        if (type === 'start') setStartDate(value);
+        if (type === 'end') setEndDate(value);
+
+        router.get(
+            route('bank-transfers.index'),
+            {
+                start_date: newStartDate,
+                end_date: newEndDate,
+                page: 1, // Reset to first page when changing dates
+            },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
 
     function handleDelete() {
         if (!deleteTransferId) return;
@@ -36,6 +67,8 @@ export default function BankTransfers({ bank_transfers = [], tags = [], last_bal
                         <BankTransferForm tags={tags} lastBalance={last_balance} isOpen={isAddModalOpen} setIsOpen={setIsAddModalOpen} />
                     </div>
                 </div>
+
+                <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateChange} />
 
                 <BankTransfersTable bankTransfers={bank_transfers} onDeleteClick={setDeleteTransferId} />
 
