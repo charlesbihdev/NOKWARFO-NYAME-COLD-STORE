@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { useForm } from '@inertiajs/react';
@@ -12,10 +13,16 @@ import { AlertTriangle, Plus, TrendingDown, Wallet } from 'lucide-react';
 import { useState } from 'react';
 
 function CreditCollection({ credit_collections = [], outstanding_debts = [], expenses = [], customers = [] }) {
+    const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [expenseOpen, setExpenseOpen] = useState(false);
 
     const filteredDebts = outstanding_debts.filter((debt) => debt.customer.toLowerCase().includes(searchQuery.toLowerCase()));
+    const { data, setData, post, processing, errors, reset } = useForm({
+        customer_id: '',
+        amount_collected: '',
+        notes: '',
+    });
 
     const {
         data: expenseFormData,
@@ -43,6 +50,27 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
             onError: (errors) => {
                 // The errors will be automatically handled by the form
                 console.error('Failed to submit expense:', errors);
+            },
+            preserveScroll: true,
+        });
+    }
+
+    function handleCollect(debt) {
+        console.log(debt);
+        setData({
+            customer_id: debt.customer_id,
+            amount_collected: '',
+            notes: '',
+        });
+        setOpen(true);
+    }
+
+    function handleSubmit(e) {
+        e.preventDefault();
+        post(route('credit-collection.store'), {
+            onSuccess: () => {
+                reset();
+                setOpen(false);
             },
             preserveScroll: true,
         });
@@ -257,6 +285,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                     <TableHead>Last Payment</TableHead>
                                     <TableHead>Days Overdue</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -275,6 +304,11 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                                 {debt.days_overdue > 14 ? 'Critical' : 'Overdue'}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell>
+                                            <Button variant="outline" size="sm" onClick={() => handleCollect(debt)}>
+                                                Collect
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 <TableRow className="bg-orange-50">
@@ -282,12 +316,74 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                         Total Outstanding
                                     </TableCell>
                                     <TableCell className="font-bold text-orange-600">GH₵{totalOutstandingDebt.toFixed(2)}</TableCell>
-                                    <TableCell colSpan={3}></TableCell>
+                                    <TableCell colSpan={4}></TableCell>
                                 </TableRow>
                             </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
+
+                {/* Collection Modal */}
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Record Credit Collection</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="customer" className="text-right">
+                                    Customer
+                                </Label>
+                                <Select value={data.customer_id} onValueChange={(value) => setData('customer_id', value)} disabled>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customers.map((customer) => (
+                                            <SelectItem key={customer.id} value={customer.id}>
+                                                {customer.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.customer_id && <InputError message={errors.customer_id} className="mt-2" />}
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="amount" className="text-right">
+                                    Amount (GH₵)
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        className="w-full"
+                                        placeholder="0.00"
+                                        value={data.amount_collected}
+                                        onChange={(e) => setData('amount_collected', e.target.value)}
+                                        required
+                                    />
+                                    {errors.amount_collected && <InputError message={errors.amount_collected} className="mt-2" />}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="notes" className="text-right">
+                                    Notes
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="notes"
+                                        placeholder="Optional notes"
+                                        value={data.notes}
+                                        onChange={(e) => setData('notes', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <Button type="submit" disabled={processing}>
+                                {processing ? 'Recording...' : 'Record Collection'}
+                            </Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
