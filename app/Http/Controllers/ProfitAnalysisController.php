@@ -121,7 +121,7 @@ class ProfitAnalysisController extends Controller
             $product = Product::find($item['product_id']);
 
             $incoming = $product->stockMovements()
-                ->whereIn('type', ['received', 'adjusted'])
+                ->where('type', 'received')
                 ->sum('quantity');
 
             $sold = $product->stockMovements()

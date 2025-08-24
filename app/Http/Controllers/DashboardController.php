@@ -54,7 +54,7 @@ class DashboardController extends Controller
             ->get()
             ->filter(function ($product) {
                 $incoming = $product->stockMovements()
-                    ->whereIn('type', ['received', 'adjusted'])
+                    ->where('type', 'received')
                     ->sum('quantity');
 
                 $sold = $product->stockMovements()

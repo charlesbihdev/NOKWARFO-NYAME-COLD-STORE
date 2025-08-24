@@ -75,21 +75,10 @@ class StockControlController extends Controller
                 ->where('type', 'received')
                 ->sum('quantity');
 
-            // Adjusted in date range
-            $adjustedInRange = $product->stockMovements()
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->where('type', 'adjusted')
-                ->sum('quantity');
-
             // Previous Stock
             $receivedBefore = $product->stockMovements()
                 ->where('created_at', '<', $startDate)
                 ->where('type', 'received')
-                ->sum('quantity');
-
-            $adjustedBefore = $product->stockMovements()
-                ->where('created_at', '<', $startDate)
-                ->where('type', 'adjusted')
                 ->sum('quantity');
 
             $soldBefore = $product->stockMovements()
@@ -97,10 +86,10 @@ class StockControlController extends Controller
                 ->where('type', 'sold')
                 ->sum('quantity');
 
-            $previousStock = $receivedBefore + $adjustedBefore - $soldBefore;
+            $previousStock = $receivedBefore - $soldBefore;
 
             // Total Available
-            $totalAvailable = $previousStock + $stockReceivedInRange + $adjustedInRange;
+            $totalAvailable = $previousStock + $stockReceivedInRange;
 
             // Sales in date range by payment type
             $cashSales = $product->saleItems()
@@ -135,8 +124,6 @@ class StockControlController extends Controller
                     return $carry + $movement->quantity;
                 } elseif (in_array($movement->type, ['out', 'sold'])) {
                     return $carry - $movement->quantity;
-                } elseif ($movement->type === 'adjusted') {
-                    return $carry + $movement->quantity;
                 }
                 return $carry;
             }, 0);
@@ -147,7 +134,7 @@ class StockControlController extends Controller
             // Activity summary
             $stock_activity_summary[] = [
                 'product' => $product->name,
-                'stock_received_today' => StockHelper::formatCartonLine($stockReceivedInRange + $adjustedInRange, $product->lines_per_carton),
+                'stock_received_today' => StockHelper::formatCartonLine($stockReceivedInRange, $product->lines_per_carton),
                 'previous_stock' => StockHelper::formatCartonLine($previousStock, $product->lines_per_carton),
                 'total_available' => StockHelper::formatCartonLine($totalAvailable, $product->lines_per_carton),
                 'stock_available' => StockHelper::formatCartonLine($totalAvailable, $product->lines_per_carton),
@@ -177,30 +164,20 @@ class StockControlController extends Controller
         $rules = [
             'product_id' => 'required|exists:products,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'type' => 'required|in:received,sold,adjusted',
+            'type' => 'required|in:received,sold',
             'unit_cost' => 'nullable|numeric|min:0', // price per carton from user
             'total_cost' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
-            'cartons' => 'nullable|integer|min:0', // cartons from user
-            'lines' => 'nullable|integer|min:0',   // loose lines from user
+            'quantity' => 'required|string|max:50', // Allow carton/line format
         ];
-
-        if ($type === 'adjusted') {
-            $rules['quantity'] = 'nullable|integer|not_in:0';
-        } else {
-            $rules['quantity'] = 'nullable|integer|min:1';
-        }
 
         $validated = $request->validate($rules);
 
         // Get product info
         $product = Product::findOrFail($validated['product_id']);
 
-        // 1. Convert cartons + loose lines to total lines
-        $totalLines = StockHelper::toLines(
-            $validated['quantity'] ?? 0,
-            $product->lines_per_carton
-        );
+        // 1. Parse carton/line format and convert to total lines
+        $totalLines = $this->parseCartonLineFormat($validated['quantity'], $product->lines_per_carton);
 
         // 2. Store quantity in LINES
         $validated['quantity'] = $totalLines;
@@ -226,6 +203,62 @@ class StockControlController extends Controller
 
 
 
+    public function edit($id)
+    {
+        $stockMovement = StockMovement::with(['product', 'supplier'])->findOrFail($id);
+        $products = Product::with(['supplier'])->orderBy('name')->get();
+        $suppliers = Supplier::where('is_active', true)->get();
+
+        return Inertia::render('stock-control-edit', [
+            'stockMovement' => $stockMovement,
+            'products' => $products,
+            'suppliers' => $suppliers,
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $stockMovement = StockMovement::findOrFail($id);
+
+        $rules = [
+            'product_id' => 'required|exists:products,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'type' => 'required|in:received,sold',
+            'unit_cost' => 'nullable|numeric|min:0',
+            'total_cost' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+            'quantity' => 'required|string|max:50', // Allow carton/line format
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Get product info
+        $product = Product::findOrFail($validated['product_id']);
+
+        // Convert carton/line format to total lines if needed
+        if (isset($validated['quantity'])) {
+            $totalLines = $this->parseCartonLineFormat($validated['quantity'], $product->lines_per_carton);
+            $validated['quantity'] = $totalLines;
+        }
+
+        // Convert price per carton → price per line
+        if (isset($validated['unit_cost']) && $validated['unit_cost'] !== null) {
+            $unitCostCarton = $validated['unit_cost'];
+            $unitCostLine = $unitCostCarton / max(1, $product->lines_per_carton);
+            $validated['unit_cost'] = $unitCostLine;
+        }
+
+        // Calculate total cost if not provided
+        if (!isset($validated['total_cost']) || $validated['total_cost'] === null) {
+            $validated['total_cost'] = ($validated['unit_cost'] ?? 0) * abs($validated['quantity']);
+        }
+
+        $stockMovement->update($validated);
+
+        return redirect()->route('stock-control.index')
+            ->with('success', 'Stock movement updated successfully.');
+    }
+
     public function destroy($id)
     {
         $stockMovement = StockMovement::findOrFail($id);
@@ -233,6 +266,41 @@ class StockControlController extends Controller
 
         return redirect()->route('stock-control.index')
             ->with('success', 'Stock movement deleted successfully.');
+    }
+
+    /**
+     * Parse carton/line format string and convert to total lines
+     * Examples: "5C2L" = 5 cartons + 2 lines, "10C" = 10 cartons, "15L" = 15 lines
+     */
+    private function parseCartonLineFormat($input, $linesPerCarton)
+    {
+        $input = trim($input);
+        
+        // If it's just a number, treat as lines
+        if (is_numeric($input)) {
+            return (int) $input;
+        }
+        
+        $totalLines = 0;
+        
+        // Match cartons: 5C, 10C, etc.
+        if (preg_match('/(\d+)C/i', $input, $matches)) {
+            $cartons = (int) $matches[1];
+            $totalLines += $cartons * $linesPerCarton;
+        }
+        
+        // Match lines: 2L, 5L, etc.
+        if (preg_match('/(\d+)L/i', $input, $matches)) {
+            $lines = (int) $matches[1];
+            $totalLines += $lines;
+        }
+        
+        // If no matches found, try to parse as just a number
+        if ($totalLines === 0 && is_numeric($input)) {
+            $totalLines = (int) $input;
+        }
+        
+        return $totalLines;
     }
 
     public function dailyMovementReport(Request $request)
@@ -249,7 +317,7 @@ class StockControlController extends Controller
             // Previous stock (before today)
             $previousStock = $product->stockMovements()
                 ->where('created_at', '<', $date . ' 00:00:00')
-                ->whereIn('type', ['in', 'adjusted'])
+                ->whereIn('type', ['in'])
                 ->sum('quantity')
                 - $product->stockMovements()
                 ->where('created_at', '<', $date . ' 00:00:00')

@@ -61,6 +61,10 @@ export default function StockControl({ stock_movements = [], products = [], supp
         }
     }
 
+    function handleEditStockMovement(id) {
+        router.visit(route('stock-control.edit', id));
+    }
+
     const handleDateRangeChange = (value, type) => {
         if (type === 'start') setStartDate(value);
         else if (type === 'end') setEndDate(value);
@@ -105,7 +109,7 @@ export default function StockControl({ stock_movements = [], products = [], supp
                     onSubmit={handleAddStock}
                 />
 
-                <StockMovementsTable stock_movements={stock_movements} onDelete={handleDeleteStockMovement} />
+                <StockMovementsTable stock_movements={stock_movements} onDelete={handleDeleteStockMovement} onEdit={handleEditStockMovement} />
             </div>
         </AppLayout>
     );

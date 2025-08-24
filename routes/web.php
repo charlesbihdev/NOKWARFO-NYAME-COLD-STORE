@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('dashboard', DashboardController::class);
     Route::resource('products', ProductController::class);
     Route::resource('stock-control', StockControlController::class);
+    Route::get('/stock-control/{id}/edit', [StockControlController::class, 'edit'])->name('stock-control.edit');
+    Route::put('/stock-control/{id}', [StockControlController::class, 'update'])->name('stock-control.update');
     Route::resource('daily-sales-report', DailySalesReportController::class);
     Route::resource('credit-collection', CreditCollectionController::class);
     Route::resource('profit-analysis', ProfitAnalysisController::class);
@@ -49,6 +51,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/suppliers/{supplier}/payments', [SupplierController::class, 'makePayment'])->name('suppliers.payments.store');
     Route::get('/suppliers/{supplier}/summary', [SupplierController::class, 'getTransactionSummary'])->name('suppliers.summary');
     Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
+
+    // Enhanced customer debt management routes
+    Route::get('/customers/{customer}/transactions', [CustomerController::class, 'transactions'])->name('customers.transactions');
+    Route::post('/customers/{customer}/payments', [CustomerController::class, 'storePayment'])->name('customers.payments.store');
+    Route::get('/customers/{customer}/summary', [CustomerController::class, 'getTransactionSummary'])->name('customers.summary');
+    Route::patch('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
 });
 
 require __DIR__ . '/settings.php';

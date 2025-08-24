@@ -109,7 +109,7 @@ class SalesTransactionController extends Controller
 
             // Check available stock (lines)
             $incoming = $product->stockMovements()
-                ->whereIn('type', ['received', 'adjusted'])
+                ->where('type', 'received')
                 ->sum('quantity');
 
             $sold = $product->stockMovements()

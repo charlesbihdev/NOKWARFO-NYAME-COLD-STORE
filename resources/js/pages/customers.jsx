@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { CreditCard, Edit, Mail, MapPin, Phone, Plus, Trash2, Users } from 'lucide-react';
+import { CreditCard, Edit, Mail, MapPin, Phone, Plus, Trash2, Users, History, DollarSign, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
 function Customers() {
@@ -165,7 +165,7 @@ function Customers() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-orange-600">
-                                GH₵{customers.reduce((sum, c) => sum + parseFloat(c.debt), 0).toFixed(2)}
+                                GH₵{customers.reduce((sum, c) => sum + parseFloat(c.outstanding_balance), 0).toFixed(2)}
                             </div>
                             <p className="text-muted-foreground text-xs">Total owed</p>
                         </CardContent>
@@ -187,7 +187,7 @@ function Customers() {
                                     <TableHead>Customer Name</TableHead>
                                     <TableHead>Contact Info</TableHead>
                                     <TableHead>Address</TableHead>
-                                    <TableHead>Customer Debt</TableHead>
+                                    <TableHead>Outstanding Balance</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -216,13 +216,34 @@ function Customers() {
                                             </TableCell>
 
                                             <TableCell className="font-medium">
-                                                <span className={customer.debt > 0 ? 'text-orange-600' : 'text-green-600'}>
-                                                    GH₵{parseFloat(customer.debt).toFixed(2)}
-                                                </span>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={customer.outstanding_balance > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}>
+                                                            GH₵{parseFloat(customer.outstanding_balance).toFixed(2)}
+                                                        </span>
+                                                        {customer.has_outstanding_debt && (
+                                                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Total Debt: GH₵{parseFloat(customer.total_debt).toFixed(2)}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Total Payments: GH₵{parseFloat(customer.total_payments).toFixed(2)}
+                                                    </div>
+                                                </div>
                                             </TableCell>
 
                                             <TableCell>
                                                 <div className="flex space-x-2">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        onClick={() => router.visit(route('customers.transactions', customer.id))}
+                                                        className="text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        <History className="h-4 w-4" />
+                                                    </Button>
                                                     <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>

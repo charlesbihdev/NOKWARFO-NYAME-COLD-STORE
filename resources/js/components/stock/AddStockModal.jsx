@@ -5,14 +5,6 @@ import { Label } from '@/components/ui/label';
 
 export default function AddStockModal({ isOpen, onClose, selectedProduct, data, setData, suppliers, errors, processing, onSubmit }) {
     function getQuantityInputProps() {
-        if (data.type === 'adjusted') {
-            return {
-                type: 'number',
-                step: 1,
-                placeholder: 'e.g. -5 for loss, 5 for gain',
-                min: undefined,
-            };
-        }
         return {
             type: 'number',
             step: 1,
@@ -42,7 +34,6 @@ export default function AddStockModal({ isOpen, onClose, selectedProduct, data, 
                             >
                                 <option value="received">Stock In</option>
                                 <option value="sold">Stock Out</option>
-                                <option value="adjusted">Adjusted</option>
                             </select>
                             {errors.type && <div className="mt-1 text-xs text-red-500">{errors.type}</div>}
                         </div>
@@ -60,11 +51,7 @@ export default function AddStockModal({ isOpen, onClose, selectedProduct, data, 
                                 required
                             />
                             {errors.quantity && <div className="mt-1 text-xs text-red-500">{errors.quantity}</div>}
-                            {data.type === 'adjusted' && (
-                                <div className="text-muted-foreground mt-1 text-xs">
-                                    Use a negative number for loss (e.g. -5 for damaged/expired), positive for gain/correction.
-                                </div>
-                            )}
+
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
