@@ -2,37 +2,38 @@ import { Badge } from '@/components/ui/badge';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 
 function SupplierBalanceCard({ supplier }) {
-    const balance = parseFloat(supplier.current_balance || 0);
-    const totalPurchases = parseFloat(supplier.total_purchases || 0);
-    const totalPayments = parseFloat(supplier.total_payments || 0);
+    const totalOwed = parseFloat(supplier.total_owed || 0) || 0;
+    const totalPaid = parseFloat(supplier.total_paid || 0) || 0;
+    const totalOutstanding = parseFloat(supplier.total_outstanding || 0) || 0;
     const transactionsCount = supplier.transactions_count || 0;
 
     const getBalanceColor = () => {
-        if (balance > 0) return 'text-red-600';
-        if (balance < 0) return 'text-green-600';
+        if (totalOutstanding > 0) return 'text-red-600';
+        if (totalOutstanding < 0) return 'text-green-600';
         return 'text-gray-600';
     };
 
     const getBalanceIcon = () => {
-        if (balance > 0) return <TrendingUp className="h-3 w-3" />;
-        if (balance < 0) return <TrendingDown className="h-3 w-3" />;
+        if (totalOutstanding > 0) return <TrendingUp className="h-3 w-3" />;
+        if (totalOutstanding < 0) return <TrendingDown className="h-3 w-3" />;
         return <Minus className="h-3 w-3" />;
     };
 
     const formatCurrency = (amount) => {
-        return `GHC ${Math.abs(amount).toFixed(2)}`;
+        const numAmount = parseFloat(amount) || 0;
+        return `GHC ${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     return (
         <div className="space-y-2">
-            {/* Current Balance */}
+            {/* Current Outstanding Balance */}
             <div className={`flex items-center gap-1 font-medium ${getBalanceColor()}`}>
                 {getBalanceIcon()}
                 <span className="text-sm">
-                    {balance > 0 && 'Owes: '}
-                    {balance < 0 && 'Credit: '}
-                    {balance === 0 && 'Settled: '}
-                    {formatCurrency(balance)}
+                    {totalOutstanding > 0 && 'Outstanding: '}
+                    {totalOutstanding < 0 && 'Credit: '}
+                    {totalOutstanding === 0 && 'Settled: '}
+                    {formatCurrency(totalOutstanding)}
                 </span>
             </div>
 
@@ -40,12 +41,12 @@ function SupplierBalanceCard({ supplier }) {
             {transactionsCount > 0 && (
                 <div className="space-y-1 text-xs text-gray-500">
                     <div className="flex justify-between">
-                        <span>Total Purchases:</span>
-                        <span>GHC {totalPurchases.toFixed(2)}</span>
+                        <span>Total Owed:</span>
+                        <span>{formatCurrency(totalOwed)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Total Payments:</span>
-                        <span>GHC {totalPayments.toFixed(2)}</span>
+                        <span>Total Paid:</span>
+                        <span>{formatCurrency(totalPaid)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Transactions:</span>
@@ -54,7 +55,7 @@ function SupplierBalanceCard({ supplier }) {
                     {supplier.last_transaction_date && (
                         <div className="flex justify-between">
                             <span>Last Activity:</span>
-                            <span>{new Date(supplier.last_transaction_date).toLocaleDateString()}</span>
+                            <span>{supplier.last_transaction_date}</span>
                         </div>
                     )}
                 </div>
@@ -62,17 +63,17 @@ function SupplierBalanceCard({ supplier }) {
 
             {/* Status Badges */}
             <div className="flex gap-1">
-                {supplier.balance_status === 'debt' && (
-                    <Badge variant="destructive" className="text-xs">
+                {totalOutstanding > 0 && (
+                    <Badge className="text-xs bg-red-600 text-white hover:bg-red-700">
                         Outstanding
                     </Badge>
                 )}
-                {supplier.balance_status === 'credit' && (
+                {totalOutstanding < 0 && (
                     <Badge variant="secondary" className="text-xs">
                         Overpaid
                     </Badge>
                 )}
-                {supplier.balance_status === 'settled' && transactionsCount > 0 && (
+                {totalOutstanding === 0 && transactionsCount > 0 && (
                     <Badge variant="outline" className="text-xs">
                         Settled
                     </Badge>

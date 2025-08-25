@@ -3,39 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
-use App\Models\SupplierTransaction;
-use App\Models\SupplierTransactionItem;
+use App\Models\SupplierCreditTransaction;
+use App\Services\SupplierCreditService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class SupplierController extends Controller
 {
+    protected $creditService;
+
+    public function __construct(SupplierCreditService $creditService)
+    {
+        $this->creditService = $creditService;
+    }
+
     public function index()
     {
-        $suppliers = Supplier::with(['latestTransaction'])
-            ->withCount('transactions')
-            ->orderByDesc('created_at')
+        $suppliers = Supplier::with(['creditTransactions.payments'])
+            ->orderBy('name')
             ->get()
             ->map(function ($supplier) {
-                return [
-                    'id' => $supplier->id,
-                    'name' => $supplier->name,
-                    'contact_person' => $supplier->contact_person,
-                    'phone' => $supplier->phone,
-                    'email' => $supplier->email,
-                    'address' => $supplier->address,
-                    'additional_info' => $supplier->additional_info,
-                    'is_active' => $supplier->is_active,
-                    'current_balance' => $supplier->current_balance,
-                    'total_purchases' => $supplier->total_purchases,
-                    'total_payments' => $supplier->total_payments,
-                    'last_transaction_date' => $supplier->last_transaction_date,
-                    'transactions_count' => $supplier->transactions_count,
-                    'balance_status' => $supplier->balance_status,
-                    'has_outstanding_debt' => $supplier->hasOutstandingDebt(),
-                ];
+                return $this->creditService->getSupplierSummary($supplier);
             });
 
         return Inertia::render('suppliers', [
@@ -57,9 +45,7 @@ class SupplierController extends Controller
         $validated['is_active'] = true;
         Supplier::create($validated);
 
-        return back()->with([
-            'success' => 'Supplier created successfully',
-        ]);
+        return back()->with('success', 'Supplier created successfully');
     }
 
     public function update(Request $request, Supplier $supplier)
@@ -75,183 +61,20 @@ class SupplierController extends Controller
 
         $supplier->update($validated);
 
-        return back()->with([
-            'success' => 'Supplier updated successfully',
-        ]);
+        return back()->with('success', 'Supplier updated successfully');
     }
 
     public function destroy(Supplier $supplier)
     {
         // Check if supplier has outstanding debt
-        if ($supplier->hasOutstandingDebt()) {
+        if ($supplier->has_outstanding_debt) {
             return back()->withErrors([
-                'error' => 'Cannot delete supplier with outstanding debt. Current balance: GHC ' . number_format($supplier->current_balance, 2)
+                'error' => 'Cannot delete supplier with outstanding debt. Current balance: ' . $supplier->formatted_total_outstanding
             ]);
         }
 
         $supplier->delete();
-        return back()->with([
-            'success' => 'Supplier deleted successfully',
-        ]);
-    }
-
-    // Transaction Management Methods
-    public function transactions(Supplier $supplier)
-    {
-        $transactions = $supplier->transactions()
-            ->with('items')
-            ->paginate(15);
-
-        // dd($transactions);
-
-        return Inertia::render('SupplierTransactions', [
-            'supplier' => $supplier,
-            'transactions' => $transactions,
-        ]);
-    }
-
-    public function storeTransaction(Request $request, Supplier $supplier)
-    {
-        $validated = $request->validate([
-            'transaction_date' => 'required|date',
-            'reference_number' => 'nullable|string|max:100',
-            'type' => 'required|in:purchase,payment,adjustment',
-            'payment_amount' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string|max:1000',
-            'items' => 'required_if:type,purchase|array|min:1',
-            'items.*.product_name' => 'required_if:type,purchase|string|max:255',
-            'items.*.quantity' => 'required_if:type,purchase|integer|min:1',
-            'items.*.unit_price' => 'required_if:type,purchase|numeric|min:1',
-        ]);
-
-        DB::transaction(function () use ($validated, $supplier) {
-            $previousBalance = $supplier->current_balance;
-            $totalAmount = 0;
-            $paymentAmount = $validated['payment_amount'] ?? 0;
-
-            // Calculate total amount for purchase transactions
-            if ($validated['type'] === 'purchase' && isset($validated['items'])) {
-                $totalAmount = collect($validated['items'])->sum(function ($item) {
-                    return $item['quantity'] * $item['unit_price'];
-                });
-            }
-
-            // Calculate new balance
-            $currentBalance = $previousBalance;
-            if ($validated['type'] === 'purchase') {
-                $currentBalance += $totalAmount;
-            }
-            $currentBalance -= $paymentAmount;
-
-            // Create transaction record
-            $transaction = SupplierTransaction::create([
-                'supplier_id' => $supplier->id,
-                'transaction_date' => $validated['transaction_date'],
-                'reference_number' => $validated['reference_number'],
-                'previous_balance' => $previousBalance,
-                'total_amount' => $totalAmount,
-                'payment_amount' => $paymentAmount,
-                'current_balance' => $currentBalance,
-                'notes' => $validated['notes'],
-                'type' => $validated['type'],
-            ]);
-
-            // Create transaction items for purchases
-            if ($validated['type'] === 'purchase' && isset($validated['items'])) {
-                foreach ($validated['items'] as $item) {
-                    SupplierTransactionItem::create([
-                        'supplier_transaction_id' => $transaction->id,
-                        'product_name' => $item['product_name'],
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
-                        'total_amount' => $item['quantity'] * $item['unit_price'],
-                    ]);
-                }
-            }
-
-            // Update supplier totals
-            $this->updateSupplierTotals($supplier);
-        });
-
-        return back()->with([
-            'success' => 'Transaction recorded successfully',
-        ]);
-    }
-
-    public function makePayment(Request $request, Supplier $supplier)
-    {
-        $validated = $request->validate([
-            'payment_amount' => 'required|numeric|min:0.01',
-            'transaction_date' => 'required|date',
-            'reference_number' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        // Validate payment amount doesn't exceed debt
-        if ($validated['payment_amount'] > $supplier->current_balance) {
-            return back()->withErrors([
-                'payment_amount' => 'Payment amount cannot exceed current debt of GHC ' . number_format($supplier->current_balance, 2)
-            ]);
-        }
-
-        DB::transaction(function () use ($validated, $supplier) {
-            $previousBalance = $supplier->current_balance;
-            $currentBalance = $previousBalance - $validated['payment_amount'];
-
-            SupplierTransaction::create([
-                'supplier_id' => $supplier->id,
-                'transaction_date' => $validated['transaction_date'],
-                'reference_number' => $validated['reference_number'],
-                'previous_balance' => $previousBalance,
-                'total_amount' => 0,
-                'payment_amount' => $validated['payment_amount'],
-                'current_balance' => $currentBalance,
-                'notes' => $validated['notes'],
-                'type' => 'payment',
-            ]);
-
-            $this->updateSupplierTotals($supplier);
-        });
-
-        return back()->with([
-            'success' => 'Payment recorded successfully',
-        ]);
-    }
-
-    public function getTransactionSummary(Supplier $supplier)
-    {
-        $summary = [
-            'total_transactions' => $supplier->transactions()->count(),
-            'total_purchases' => $supplier->transactions()->purchases()->sum('total_amount'),
-            'total_payments' => $supplier->transactions()->payments()->sum('payment_amount'),
-            'current_balance' => $supplier->current_balance,
-            'last_transaction_date' => $supplier->last_transaction_date,
-            'recent_transactions' => $supplier->transactions()
-                ->with('items')
-                ->take(5)
-                ->get(),
-        ];
-
-        return response()->json($summary);
-    }
-
-    // Helper Methods
-    private function updateSupplierTotals(Supplier $supplier)
-    {
-        $totals = $supplier->transactions()
-            ->selectRaw('
-                SUM(total_amount) as total_purchases,
-                SUM(payment_amount) as total_payments,
-                MAX(transaction_date) as last_transaction_date
-            ')
-            ->first();
-
-        $supplier->update([
-            'total_purchases' => $totals->total_purchases ?? 0,
-            'total_payments' => $totals->total_payments ?? 0,
-            'current_balance' => ($totals->total_purchases ?? 0) - ($totals->total_payments ?? 0),
-            'last_transaction_date' => $totals->last_transaction_date,
-        ]);
+        return back()->with('success', 'Supplier deleted successfully');
     }
 
     public function toggleStatus(Supplier $supplier)
@@ -260,8 +83,179 @@ class SupplierController extends Controller
             'is_active' => !$supplier->is_active
         ]);
 
-        return back()->with([
-            'success' => 'Supplier status updated successfully',
+        return back()->with('success', 'Supplier status updated successfully');
+    }
+
+    // Credit Transaction Management
+    public function createCreditTransaction(Request $request, Supplier $supplier)
+    {
+        $validated = $request->validate([
+            'transaction_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+            'items' => 'required|array|min:1',
+            'items.*.product_name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0.01',
+            'payment_amount' => 'nullable|numeric|min:0',
+            'payment_date' => 'nullable|date',
+            'payment_method' => 'nullable|string|max:50',
+        ]);
+
+        try {
+            // Calculate total amount from items
+            $totalAmount = collect($validated['items'])->sum(function ($item) {
+                return $item['quantity'] * $item['unit_price'];
+            });
+
+            // Calculate amount owed (total - payment)
+            $paymentAmount = $validated['payment_amount'] ?? 0;
+            $amountOwed = $totalAmount; // Amount owed is the total, not total minus payment
+
+            $transaction = $this->creditService->createCreditTransaction([
+                'supplier_id' => $supplier->id,
+                'transaction_date' => $validated['transaction_date'],
+                'description' => $validated['notes'] ?: 'Credit transaction',
+                'amount_owed' => $amountOwed,
+                'notes' => $validated['notes'],
+                'items' => $validated['items'],
+            ]);
+
+            // Create payment record separately if payment amount > 0
+            if ($paymentAmount > 0) {
+                $this->creditService->makePayment([
+                    'supplier_credit_transaction_id' => $transaction->id,
+                    'supplier_id' => $supplier->id,
+                    'payment_date' => $validated['payment_date'] ?? $validated['transaction_date'],
+                    'payment_amount' => $paymentAmount,
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
+
+            return back()->with('success', 'Credit transaction created successfully');
+        } catch (\Exception $e) {
+            dd('6. Exception caught', $e->getMessage(), $e->getTraceAsString());
+            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
+        }
+    }
+
+    public function makePayment(Request $request, SupplierCreditTransaction $transaction)
+    {
+        $validated = $request->validate([
+            'payment_amount' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'payment_method' => 'nullable|string|max:50',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $payment = $this->creditService->makePayment([
+                'supplier_credit_transaction_id' => $transaction->id,
+                ...$validated
+            ]);
+
+            return back()->with('success', 'Payment recorded successfully');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function updateCreditTransaction(Request $request, SupplierCreditTransaction $transaction)
+    {
+        $validated = $request->validate([
+            'transaction_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+            'items' => 'required|array|min:1',
+            'items.*.product_name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0.01',
+        ]);
+
+        try {
+            // Calculate total amount from items
+            $totalAmount = collect($validated['items'])->sum(function ($item) {
+                return $item['quantity'] * $item['unit_price'];
+            });
+
+            $this->creditService->updateCreditTransaction($transaction, [
+                'transaction_date' => $validated['transaction_date'],
+                'description' => $validated['notes'], // Map notes to description
+                'amount_owed' => $totalAmount,
+                'notes' => $validated['notes'],
+                'items' => $validated['items'],
+            ]);
+            
+            return back()->with('success', 'Transaction updated successfully');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function deleteCreditTransaction(SupplierCreditTransaction $transaction)
+    {
+        try {
+            $this->creditService->deleteCreditTransaction($transaction);
+            return back()->with('success', 'Transaction deleted successfully');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function transactions(Supplier $supplier)
+    {
+        // Get filter parameters with current month defaults
+        $startDate = request()->input('start_date');
+        $endDate = request()->input('end_date');
+        $statusFilter = request()->input('status', 'all');
+
+        // Default to current month if no dates provided
+        if (!$startDate && !$endDate) {
+            $now = now();
+            $startDate = $now->startOfMonth()->format('Y-m-d');
+            $endDate = $now->endOfMonth()->format('Y-m-d');
+        } elseif ($startDate && !$endDate) {
+            $endDate = $startDate;
+        } elseif (!$startDate && $endDate) {
+            $startDate = $endDate;
+        }
+
+        // Validate and parse dates
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        // Build query with filters
+        $query = $supplier->creditTransactions()
+            ->with(['payments', 'items'])
+            ->whereBetween('transaction_date', [$startDate, $endDate]);
+
+        // Apply status filter
+        if ($statusFilter !== 'all') {
+            switch ($statusFilter) {
+                case 'debt':
+                    // Debt = not fully paid
+                    $query->where('is_fully_paid', false);
+                    break;
+                case 'paid':
+                    // Fully paid
+                    $query->where('is_fully_paid', true);
+                    break;
+            }
+        }
+
+        // Order and paginate
+        $transactions = $query
+            ->orderByDesc('transaction_date')
+            ->paginate(15)
+            ->through(function ($transaction) {
+                return $this->creditService->getTransactionSummary($transaction);
+            });
+
+        return Inertia::render('SupplierTransactions', [
+            'supplier' => $supplier,
+            'transactions' => $transactions,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
         ]);
     }
 }

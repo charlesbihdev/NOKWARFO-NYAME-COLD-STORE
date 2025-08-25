@@ -46,9 +46,10 @@ Route::middleware('auth')->group(function () {
 
     // New debt management routes
     Route::get('/suppliers/{supplier}/transactions', [SupplierController::class, 'transactions'])->name('suppliers.transactions');
-    Route::post('/suppliers/{supplier}/transactions', [SupplierController::class, 'storeTransaction'])->name('suppliers.transactions.store');
-    Route::post('/suppliers/{supplier}/payments', [SupplierController::class, 'makePayment'])->name('suppliers.payments.store');
-    Route::get('/suppliers/{supplier}/summary', [SupplierController::class, 'getTransactionSummary'])->name('suppliers.summary');
+    Route::post('/suppliers/{supplier}/credit-transactions', [SupplierController::class, 'createCreditTransaction'])->name('suppliers.create-credit-transaction');
+    Route::put('/suppliers/credit-transactions/{transaction}', [SupplierController::class, 'updateCreditTransaction'])->name('suppliers.update-credit-transaction');
+    Route::delete('/suppliers/credit-transactions/{transaction}', [SupplierController::class, 'deleteCreditTransaction'])->name('suppliers.delete-credit-transaction');
+    Route::post('/suppliers/credit-transactions/{transaction}/payments', [SupplierController::class, 'makePayment'])->name('suppliers.make-payment');
     Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
     // Enhanced customer debt management routes

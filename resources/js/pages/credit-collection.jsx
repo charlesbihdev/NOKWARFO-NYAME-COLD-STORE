@@ -300,7 +300,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                             {debt.days_overdue} days
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={debt.days_overdue > 14 ? 'destructive' : 'secondary'}>
+                                            <Badge className={debt.days_overdue > 14 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-orange-600 text-white hover:bg-orange-700'}>
                                                 {debt.days_overdue > 14 ? 'Critical' : 'Overdue'}
                                             </Badge>
                                         </TableCell>
