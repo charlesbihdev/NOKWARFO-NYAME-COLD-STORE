@@ -132,10 +132,9 @@ class SupplierController extends Controller
                 ]);
             }
 
-            return back()->with('success', 'Credit transaction created successfully');
+            return redirect()->back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
-            dd('6. Exception caught', $e->getMessage(), $e->getTraceAsString());
-            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
         }
     }
 
@@ -177,9 +176,16 @@ class SupplierController extends Controller
                 return $item['quantity'] * $item['unit_price'];
             });
 
+            // Auto-generate description from items
+            $description = 'Credit purchase: ' . collect($validated['items'])
+                ->map(function ($item) {
+                    return $item['product_name'] . ' (Qty: ' . $item['quantity'] . ')';
+                })
+                ->join(', ');
+
             $this->creditService->updateCreditTransaction($transaction, [
                 'transaction_date' => $validated['transaction_date'],
-                'description' => $validated['notes'], // Map notes to description
+                'description' => $description,
                 'amount_owed' => $totalAmount,
                 'notes' => $validated['notes'],
                 'items' => $validated['items'],
@@ -246,7 +252,7 @@ class SupplierController extends Controller
         // Order and paginate
         $transactions = $query
             ->orderByDesc('transaction_date')
-            ->paginate(15)
+            ->simplePaginate(20)
             ->through(function ($transaction) {
                 return $this->creditService->getTransactionSummary($transaction);
             });

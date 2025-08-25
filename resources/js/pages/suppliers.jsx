@@ -276,9 +276,10 @@ function Suppliers({ suppliers = [], errors = {} }) {
 
                 <AddCreditTransactionModal
                     isOpen={isCreditTransactionModalOpen}
-                    onClose={handleCloseCreditTransactionModal}
+                    setIsOpen={setIsCreditTransactionModalOpen}
                     supplier={selectedSupplier}
                     errors={errors}
+                    onClose={() => setSelectedSupplier(null)}
                 />
             </div>
         </AppLayout>

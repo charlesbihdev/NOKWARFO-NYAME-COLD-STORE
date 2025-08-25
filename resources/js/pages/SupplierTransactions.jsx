@@ -8,16 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DollarSign, Edit, Trash2, Users, ArrowLeft, Calendar } from 'lucide-react';
+import { DollarSign, Edit, Trash2, Users, ArrowLeft, Calendar, Plus } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import DateRangePicker from '@/components/DateRangePicker';
 import SupplierBalanceCard from '@/components/supplier/SupplierBalanceCard';
 import { useForm } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
+import InputError from '@/components/InputError';
+
 
 function SupplierTransactions({ supplier, transactions, start_date = '', end_date = '' }) {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState(null);
+    const [editItems, setEditItems] = useState([{ product_name: '', quantity: 1, unit_price: 0 }]);
 
     // Filter states
     const [statusFilter, setStatusFilter] = useState('all');
@@ -37,11 +41,13 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
     const [startDate, setStartDate] = useState(start_date || defaultStartDate);
     const [endDate, setEndDate] = useState(end_date || defaultEndDate);
 
-    const { data, setData, post, put, processing, reset, clearErrors } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         payment_amount: '',
         payment_date: new Date().toISOString().split('T')[0],
         payment_method: '',
         notes: '',
+        transaction_date: '',
+        items: [],
     });
 
     const goBack = () => router.get(route('suppliers.index'));
@@ -81,31 +87,6 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
         );
     };
 
-    // Handle pagination
-    const handlePageChange = (page) => {
-        router.get(
-            route('suppliers.transactions', supplier.id),
-            {
-                start_date: startDate,
-                end_date: endDate,
-                status: statusFilter,
-                page: page,
-            },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    };
-
-    // Helper function to build pagination URLs with filters
-    const buildPaginationUrl = (url) => {
-        if (!url) return '#';
-        
-        const urlObj = new URL(url);
-        urlObj.searchParams.set('start_date', startDate || '');
-        urlObj.searchParams.set('end_date', endDate || '');
-        urlObj.searchParams.set('status', statusFilter || '');
-        return urlObj.toString();
-    };
-
     function handleMakePayment(transaction) {
         setSelectedTransaction(transaction);
         setIsPaymentModalOpen(true);
@@ -115,11 +96,28 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
     function handleEditTransaction(transaction) {
         setSelectedTransaction(transaction);
         setIsEditModalOpen(true);
+        
+        // Format date for HTML date input (YYYY-MM-DD)
+        let formattedDate = '';
+        if (transaction.transaction_date) {
+            const date = new Date(transaction.transaction_date);
+            formattedDate = date.toISOString().split('T')[0];
+        }
+        
+        // Set up items for editing - use existing items or create default
+        const editItems = transaction.items && transaction.items.length > 0 
+            ? transaction.items.map(item => ({
+                product_name: item.product_name,
+                quantity: item.quantity,
+                unit_price: item.unit_price
+            }))
+            : [{ product_name: '', quantity: 1, unit_price: 0 }];
+        
+        setEditItems(editItems);
         setData({
-            transaction_date: transaction.transaction_date,
-            description: transaction.description,
-            amount_owed: transaction.amount_owed,
+            transaction_date: formattedDate,
             notes: transaction.notes || '',
+            items: editItems,
         });
     }
 
@@ -163,13 +161,37 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
         
         if (!selectedTransaction) return;
 
+        // Send the edit data with items
         put(route('suppliers.update-credit-transaction', selectedTransaction.id), {
             onSuccess: () => {
                 setIsEditModalOpen(false);
                 setSelectedTransaction(null);
+                setEditItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
                 reset();
             },
         });
+    }
+
+    // Item management functions for edit modal
+    function addEditItem() {
+        const newItems = [...editItems, { product_name: '', quantity: 1, unit_price: 0 }];
+        setEditItems(newItems);
+        setData('items', newItems);
+    }
+
+    function removeEditItem(index) {
+        if (editItems.length > 1) {
+            const newItems = editItems.filter((_, i) => i !== index);
+            setEditItems(newItems);
+            setData('items', newItems);
+        }
+    }
+
+    function updateEditItem(index, field, value) {
+        const newItems = [...editItems];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setEditItems(newItems);
+        setData('items', newItems);
     }
 
     function closePaymentModal() {
@@ -182,6 +204,7 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
     function closeEditModal() {
         setIsEditModalOpen(false);
         setSelectedTransaction(null);
+        setEditItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
         reset();
         clearErrors();
     }
@@ -224,56 +247,18 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                     </div>
                 </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center space-x-2">
-                                <Users className="h-5 w-5 text-blue-500" />
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Transactions</p>
-                                    <p className="text-2xl font-bold">{transactions.total}</p>
-                                </div>
+                {/* Summary Card - Simplified */}
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex items-center space-x-2">
+                            <Users className="h-5 w-5 text-blue-500" />
+                            <div>
+                                <p className="text-sm text-gray-600">Showing Transactions</p>
+                                <p className="text-2xl font-bold">{transactions.data.length}</p>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center space-x-2">
-                                <DollarSign className="h-5 w-5 text-green-500" />
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Owed</p>
-                                    <p className="text-2xl font-bold">{formatCurrency(supplier.total_owed)}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center space-x-2">
-                                <DollarSign className="h-5 w-5 text-orange-500" />
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Paid</p>
-                                    <p className="text-2xl font-bold">{formatCurrency(supplier.total_paid)}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center space-x-2">
-                                <DollarSign className="h-5 w-5 text-red-500" />
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Outstanding</p>
-                                    <p className="text-2xl font-bold">{formatCurrency(supplier.total_outstanding)}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Transactions List */}
                 <Card>
@@ -339,7 +324,7 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
 
                                 {/* Results Count */}
                                 <div className="text-sm text-gray-600">
-                                    Showing {transactions.data.length} of {transactions.total} transactions
+                                    Showing {transactions.data.length} transactions
                                 </div>
                             </div>
                         </div>
@@ -368,16 +353,15 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                     </Button>
                                 )}
                                 
-                                {transaction.status === 'debt' && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleEditTransaction(transaction)}
-                                    >
-                                        <Edit className="mr-2 h-3 w-3" />
-                                        Edit
-                                    </Button>
-                                )}
+                                {/* Edit button for all transactions */}
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditTransaction(transaction)}
+                                >
+                                    <Edit className="mr-2 h-3 w-3" />
+                                    Edit
+                                </Button>
                                 
                                 {/* Delete button for all transactions */}
                                 <Button
@@ -399,31 +383,38 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                             </div>
                         )}
 
-                        {/* Goods Items Table - Compact */}
-                        {transaction.items && transaction.items.length > 0 && (
-                            <div className="mb-3">
-                                <table className="w-full text-xs border rounded">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="py-1 px-2 text-left border-b text-xs">Product</th>
-                                            <th className="py-1 px-2 text-right border-b text-xs">Qty</th>
-                                            <th className="py-1 px-2 text-right border-b text-xs">Unit Price</th>
-                                            <th className="py-1 px-2 text-right border-b text-xs">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transaction.items.map((item, index) => (
-                                    <tr key={index} className="border-b">
-                                                <td className="py-1 px-2">{item.product_name}</td>
-                                                <td className="py-1 px-2 text-right">{item.quantity}</td>
-                                                <td className="py-1 px-2 text-right">{formatCurrency(item.unit_price)}</td>
-                                                <td className="py-1 px-2 text-right">{formatCurrency(item.quantity * item.unit_price)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                            </div>
-                        )}
+                        {/* Items Purchased Table */}
+                        <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Items Purchased:</h4>
+                            {transaction.items && transaction.items.length > 0 ? (
+                                <div className="overflow-hidden rounded-md border border-gray-200">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="py-2 px-3 text-left font-medium text-gray-700">Product</th>
+                                                <th className="py-2 px-3 text-right font-medium text-gray-700">Qty</th>
+                                                <th className="py-2 px-3 text-right font-medium text-gray-700">Unit Price</th>
+                                                <th className="py-2 px-3 text-right font-medium text-gray-700">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {transaction.items.map((item, index) => (
+                                                <tr key={item.id || index} className="hover:bg-gray-50">
+                                                    <td className="py-2 px-3 text-gray-900">{item.product_name}</td>
+                                                    <td className="py-2 px-3 text-right text-gray-700">{item.quantity}</td>
+                                                    <td className="py-2 px-3 text-right text-gray-700">{formatCurrency(item.unit_price)}</td>
+                                                    <td className="py-2 px-3 text-right font-medium text-gray-900">{formatCurrency(item.total_amount || (item.quantity * item.unit_price))}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                                    <p className="text-sm text-gray-600 italic">No detailed items recorded for this transaction</p>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Financial Summary - Each item on its own line */}
                         <div className="space-y-1 text-xs mb-3">
@@ -470,70 +461,45 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                             )}
                         </div>
 
-                        {/* Pagination */}
-                        {transactions.last_page > 1 && (
-                            <div className="mt-6 flex items-center justify-between">
-                                <div className="text-sm text-gray-700">
-                                    Showing {transactions.from} to {transactions.to} of {transactions.total} results
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {/* Previous Page */}
-                    {transactions.prev_page_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handlePageChange(transactions.current_page - 1)}
-                                            disabled={transactions.current_page === 1}
-                                        >
-                                            Previous
-                                        </Button>
-                                    )}
-
-                                    {/* Page Numbers */}
-                                    <div className="flex items-center gap-1">
-                                        {Array.from({ length: transactions.last_page }, (_, i) => i + 1)
-                                            .filter(page => {
-                                                // Show first page, last page, current page, and pages around current
-                                                const current = transactions.current_page;
-                                                const last = transactions.last_page;
-                                                return page === 1 || page === last || 
-                                                       (page >= current - 1 && page <= current + 1);
-                                            })
-                                            .map((page, index, array) => {
-                                                // Add ellipsis if there's a gap
-                                                const prevPage = array[index - 1];
-                                                const showEllipsis = prevPage && page - prevPage > 1;
-                                                
-                                                return (
-                                                    <div key={page} className="flex items-center">
-                                                        {showEllipsis && (
-                                                            <span className="px-2 text-gray-500">...</span>
-                                                        )}
-                                                        <Button
-                                                            variant={page === transactions.current_page ? "default" : "outline"}
-                                                            size="sm"
-                                                            onClick={() => handlePageChange(page)}
-                                                            className="w-8 h-8 p-0"
-                                                        >
-                                                            {page}
-                                                        </Button>
-                                                    </div>
-                                                );
-                                            })}
-                                    </div>
-
-                                    {/* Next Page */}
-                    {transactions.next_page_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handlePageChange(transactions.current_page + 1)}
-                                            disabled={transactions.current_page === transactions.last_page}
-                                        >
-                                            Next
-                                        </Button>
-                    )}
-                </div>
+                        {/* Simple Pagination */}
+                        {(transactions.prev_page_url || transactions.next_page_url) && (
+                            <div className="mt-6 flex items-center justify-center gap-4">
+                                {/* Previous Page */}
+                                {transactions.prev_page_url ? (
+                                    <Link
+                                        href={transactions.prev_page_url}
+                                        preserveState
+                                        preserveScroll
+                                        className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
+                                    >
+                                        Previous
+                                    </Link>
+                                ) : (
+                                    <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
+                                        Previous
+                                    </span>
+                                )}
+                                
+                                {/* Page Info */}
+                                <span className="rounded border px-3 py-1">
+                                    {transactions.current_page}
+                                </span>
+                                
+                                {/* Next Page */}
+                                {transactions.next_page_url ? (
+                                    <Link
+                                        href={transactions.next_page_url}
+                                        preserveState
+                                        preserveScroll
+                                        className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
+                                    >
+                                        Next
+                                    </Link>
+                                ) : (
+                                    <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
+                                        Next
+                                    </span>
+                                )}
                             </div>
                         )}
                     </CardContent>
@@ -625,7 +591,7 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
 
                 {/* Edit Transaction Modal */}
                 <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <Edit className="h-5 w-5" />
@@ -634,6 +600,26 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                         </DialogHeader>
 
                         <form onSubmit={handleEditSubmit} className="space-y-4">
+                            {/* Error Display */}
+                            {errors.error && (
+                                <div className="rounded-md bg-red-50 p-4">
+                                    <div className="text-sm text-red-700">{errors.error}</div>
+                                </div>
+                            )}
+
+                            {/* Transaction Info */}
+                            {selectedTransaction && (
+                                <div className="rounded-lg bg-gray-50 p-3">
+                                    <p className="text-sm font-medium text-gray-700">
+                                        Editing transaction for: {supplier.name}
+                                    </p>
+                                    <p className="text-xs text-gray-600">
+                                        Current Status: {selectedTransaction.status.toUpperCase()}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Transaction Date */}
                             <div className="space-y-2">
                                 <Label htmlFor="edit_transaction_date">Transaction Date *</Label>
                                 <Input
@@ -643,34 +629,97 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                     onChange={(e) => setData('transaction_date', e.target.value)}
                                     required
                                 />
+                                <InputError message={errors.transaction_date} />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="edit_description">Description *</Label>
-                                <Textarea
-                                    id="edit_description"
-                                    placeholder="Describe the goods taken on credit"
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    required
-                                    rows={3}
-                                />
+                            {/* Items Section */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label>Goods Items *</Label>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addEditItem}
+                                        className="h-8"
+                                    >
+                                        <Plus className="mr-1 h-3 w-3" />
+                                        Add Item
+                                    </Button>
+                                </div>
+
+                                {/* Column Labels */}
+                                <div className="grid grid-cols-12 gap-2 px-3 text-xs font-medium text-gray-600">
+                                    <div className="col-span-5">Product Name</div>
+                                    <div className="col-span-3 text-center">Quantity</div>
+                                    <div className="col-span-3 text-center">Unit Price (GHC)</div>
+                                    <div className="col-span-1"></div>
+                                </div>
+
+                                {editItems.map((item, index) => (
+                                    <div key={index} className="grid grid-cols-12 gap-2 rounded-lg border p-3">
+                                        <div className="col-span-5">
+                                            <Input
+                                                placeholder="Product name (e.g., Fish, Meat)"
+                                                value={item.product_name}
+                                                onChange={(e) => updateEditItem(index, 'product_name', e.target.value)}
+                                                required
+                                            />
+                                            <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
+                                        </div>
+                                        <div className="col-span-3">
+                                            <Input
+                                                type="number"
+                                                placeholder="Qty"
+                                                value={item.quantity}
+                                                onChange={(e) => updateEditItem(index, 'quantity', e.target.value)}
+                                                min="1"
+                                                required
+                                            />
+                                            <InputError message={errors[`items.${index}.quantity`]} className="mt-1" />
+                                        </div>
+                                        <div className="col-span-3">
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                placeholder="Unit Price"
+                                                value={item.unit_price}
+                                                onChange={(e) => updateEditItem(index, 'unit_price', e.target.value)}
+                                                min="0.01"
+                                                required
+                                            />
+                                            <InputError message={errors[`items.${index}.unit_price`]} className="mt-1" />
+                                        </div>
+                                        <div className="col-span-1">
+                                            {editItems.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => removeEditItem(index)}
+                                                    className="h-8 w-8 p-0 text-red-600"
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="edit_amount_owed">Amount Owed (GHC) *</Label>
-                                <Input
-                                    id="edit_amount_owed"
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    placeholder="0.00"
-                                    value={data.amount_owed}
-                                    onChange={(e) => setData('amount_owed', e.target.value)}
-                                    required
-                                />
+                            {/* Total Amount Display */}
+                            <div className="rounded-lg bg-blue-50 p-3">
+                                <div className="flex justify-between text-sm font-medium">
+                                    <span>Total Amount:</span>
+                                    <span className="text-blue-600">
+                                        GHC {editItems.reduce((sum, item) => {
+                                            return sum + parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0);
+                                        }, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
                             </div>
 
+                            {/* Notes */}
                             <div className="space-y-2">
                                 <Label htmlFor="edit_notes">Notes</Label>
                                 <Textarea
@@ -678,9 +727,19 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                     placeholder="Additional information about this transaction"
                                     value={data.notes}
                                     onChange={(e) => setData('notes', e.target.value)}
-                                    rows={2}
+                                    rows={3}
                                 />
+                                <InputError message={errors.notes} />
                             </div>
+
+                            {/* Payment Restriction Warning */}
+                            {selectedTransaction && selectedTransaction.payments && selectedTransaction.payments.length > 0 && (
+                                <div className="rounded-lg bg-amber-50 p-3 border border-amber-200">
+                                    <div className="text-sm text-amber-800">
+                                        <strong>Note:</strong> This transaction has payments. Financial amounts cannot be changed, but you can edit date and notes.
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex justify-end gap-2 pt-4">
                                 <Button type="button" variant="outline" onClick={closeEditModal}>

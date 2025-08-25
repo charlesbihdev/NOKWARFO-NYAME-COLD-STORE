@@ -96,6 +96,7 @@ class SupplierCreditService
             'amount_paid' => $amountPaid,
             'remaining_balance' => $remainingBalance,
             'status' => $status,
+            'notes' => $transaction->notes,
             'payments' => $transaction->payments->map(function ($payment) {
                 return [
                     'id' => $payment->id,
@@ -103,6 +104,15 @@ class SupplierCreditService
                     'payment_amount' => $payment->payment_amount,
                     'payment_method' => $payment->payment_method,
                     'notes' => $payment->notes,
+                ];
+            }),
+            'items' => $transaction->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'product_name' => $item->product_name,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'total_amount' => $item->total_amount,
                 ];
             }),
             'can_make_payment' => $remainingBalance > 0,
@@ -146,20 +156,41 @@ class SupplierCreditService
      */
     public function updateCreditTransaction(SupplierCreditTransaction $transaction, array $data): SupplierCreditTransaction
     {
-        // Only allow updates if no payments have been made
-        if ($transaction->payments()->exists()) {
-            throw new Exception('Cannot edit transaction that has payments');
+        $hasPayments = $transaction->payments()->exists();
+        
+        // Allow flexible updates:
+        // - Date and notes can always be updated
+        // - Amount and items can only be updated if no payments exist
+        $updateData = [];
+        
+        // Always allow date and notes updates
+        if (isset($data['transaction_date'])) {
+            $updateData['transaction_date'] = $data['transaction_date'];
+        }
+        if (isset($data['notes'])) {
+            $updateData['notes'] = $data['notes'];
+        }
+        if (isset($data['description'])) {
+            $updateData['description'] = $data['description'];
+        }
+        
+        // Only allow financial changes if no payments exist
+        if (!$hasPayments) {
+            if (isset($data['amount_owed'])) {
+                $updateData['amount_owed'] = $data['amount_owed'];
+            }
+        } else if (isset($data['amount_owed']) && $data['amount_owed'] != $transaction->amount_owed) {
+            throw new Exception('Cannot change amount when payments have been made. You can edit date and notes only.');
         }
 
-        $transaction->update([
-            'transaction_date' => $data['transaction_date'] ?? $transaction->transaction_date,
-            'description' => $data['description'] ?? $transaction->description,
-            'amount_owed' => $data['amount_owed'] ?? $transaction->amount_owed,
-            'notes' => $data['notes'] ?? $transaction->notes,
-        ]);
+        $transaction->update($updateData);
 
-        // Update transaction items if provided
+        // Update transaction items only if no payments exist
         if (isset($data['items']) && is_array($data['items'])) {
+            if ($hasPayments) {
+                throw new Exception('Cannot change items when payments have been made. You can edit date and notes only.');
+            }
+            
             // Delete existing items
             $transaction->items()->delete();
             
