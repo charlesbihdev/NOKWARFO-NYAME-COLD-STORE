@@ -8,7 +8,7 @@ import { useForm } from '@inertiajs/react';
 import { Calendar, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-function AddCreditTransactionModal({ isOpen, setIsOpen, supplier, errors = {}, onClose }) {
+function AddCreditTransactionModal({ isOpen, onClose, supplier, errors = {} }) {
     const [items, setItems] = useState([{ product_name: '', quantity: 1, unit_price: 0 }]);
 
     const { data, setData, post, processing, reset, clearErrors } = useForm({
@@ -43,48 +43,31 @@ function AddCreditTransactionModal({ isOpen, setIsOpen, supplier, errors = {}, o
         
         if (!supplier) return;
 
-        console.log('Form submitted with data:', {
-            supplier_id: supplier.id,
-            transaction_date: data.transaction_date,
-            notes: data.notes,
-            items: items,
-            payment_amount: data.payment_amount || 0,
-            payment_date: data.payment_date,
-            payment_method: data.payment_method,
-        });
 
+
+        // Update form data first, then submit
+        setData({
+            ...data,
+            items: items
+        });
+        
         post(route('suppliers.create-credit-transaction', supplier.id), {
-            transaction_date: data.transaction_date,
-            notes: data.notes,
-            items: items,
-            payment_amount: data.payment_amount || 0,
-            payment_date: data.payment_date,
-            payment_method: data.payment_method,
-        }, {
             onSuccess: () => {
-                console.log('Success callback called');
-                handleClose();
+                reset();
+                clearErrors();
+                setItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
+                onClose();
             },
-            onError: (errors) => {
-                console.log('Error callback called with:', errors);
-                // Errors will be automatically handled by the form
-            },
-            onFinish: () => {
-                console.log('Form submission finished');
-            },
+            preserveScroll: true,
+            preserveState: true,
+            only: ['suppliers', 'errors', 'flash'],
         });
     }
 
     function handleClose() {
-        setIsOpen(false);
         reset();
         clearErrors();
         setItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
-        setData((prev) => ({
-            ...prev,
-            payment_amount: '',
-            payment_method: '',
-        }));
         onClose();
     }
 
@@ -117,7 +100,7 @@ function AddCreditTransactionModal({ isOpen, setIsOpen, supplier, errors = {}, o
     }, 0);
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Add Transaction</DialogTitle>

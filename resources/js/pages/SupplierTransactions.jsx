@@ -152,7 +152,11 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                 setIsPaymentModalOpen(false);
                 setSelectedTransaction(null);
                 reset();
+                clearErrors();
             },
+            preserveScroll: true,
+            preserveState: true,
+            only: ['supplier', 'transactions', 'errors', 'flash'],
         });
     }
 
@@ -161,14 +165,24 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
         
         if (!selectedTransaction) return;
 
-        // Send the edit data with items
+        // Update form data first, then submit
+        setData({
+            ...data,
+            items: editItems
+        });
+
+        // Send the edit data using form data automatically
         put(route('suppliers.update-credit-transaction', selectedTransaction.id), {
             onSuccess: () => {
                 setIsEditModalOpen(false);
                 setSelectedTransaction(null);
                 setEditItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
                 reset();
+                clearErrors();
             },
+            preserveScroll: true,
+            preserveState: true,
+            only: ['supplier', 'transactions', 'errors', 'flash'],
         });
     }
 
@@ -248,17 +262,17 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                 </div>
 
                 {/* Summary Card - Simplified */}
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                            <Users className="h-5 w-5 text-blue-500" />
-                            <div>
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center space-x-2">
+                                <Users className="h-5 w-5 text-blue-500" />
+                                <div>
                                 <p className="text-sm text-gray-600">Showing Transactions</p>
                                 <p className="text-2xl font-bold">{transactions.data.length}</p>
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
 
                 {/* Transactions List */}
                 <Card>
@@ -354,25 +368,25 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                 )}
                                 
                                 {/* Edit button for all transactions */}
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEditTransaction(transaction)}
-                                >
-                                    <Edit className="mr-2 h-3 w-3" />
-                                    Edit
-                                </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleEditTransaction(transaction)}
+                                        >
+                                            <Edit className="mr-2 h-3 w-3" />
+                                            Edit
+                                        </Button>
                                 
                                 {/* Delete button for all transactions */}
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleDeleteTransaction(transaction.id)}
-                                    className="text-red-600"
-                                >
-                                    <Trash2 className="mr-2 h-3 w-3" />
-                                    Delete
-                                </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleDeleteTransaction(transaction.id)}
+                                            className="text-red-600"
+                                        >
+                                            <Trash2 className="mr-2 h-3 w-3" />
+                                            Delete
+                                        </Button>
                             </div>
                         </div>
 
@@ -389,31 +403,31 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                             {transaction.items && transaction.items.length > 0 ? (
                                 <div className="overflow-hidden rounded-md border border-gray-200">
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50">
-                                            <tr>
+                                    <thead className="bg-gray-50">
+                                        <tr>
                                                 <th className="py-2 px-3 text-left font-medium text-gray-700">Product</th>
                                                 <th className="py-2 px-3 text-right font-medium text-gray-700">Qty</th>
                                                 <th className="py-2 px-3 text-right font-medium text-gray-700">Unit Price</th>
                                                 <th className="py-2 px-3 text-right font-medium text-gray-700">Total</th>
-                                            </tr>
-                                        </thead>
+                                </tr>
+                            </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {transaction.items.map((item, index) => (
+                                {transaction.items.map((item, index) => (
                                                 <tr key={item.id || index} className="hover:bg-gray-50">
                                                     <td className="py-2 px-3 text-gray-900">{item.product_name}</td>
                                                     <td className="py-2 px-3 text-right text-gray-700">{item.quantity}</td>
                                                     <td className="py-2 px-3 text-right text-gray-700">{formatCurrency(item.unit_price)}</td>
                                                     <td className="py-2 px-3 text-right font-medium text-gray-900">{formatCurrency(item.total_amount || (item.quantity * item.unit_price))}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                            </div>
                             ) : (
                                 <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
                                     <p className="text-sm text-gray-600 italic">No detailed items recorded for this transaction</p>
-                                </div>
-                            )}
+                            </div>
+                        )}
                         </div>
 
                         {/* Financial Summary - Each item on its own line */}
@@ -464,15 +478,15 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                         {/* Simple Pagination */}
                         {(transactions.prev_page_url || transactions.next_page_url) && (
                             <div className="mt-6 flex items-center justify-center gap-4">
-                                {/* Previous Page */}
+                                    {/* Previous Page */}
                                 {transactions.prev_page_url ? (
                                     <Link
                                         href={transactions.prev_page_url}
                                         preserveState
                                         preserveScroll
                                         className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
-                                    >
-                                        Previous
+                                        >
+                                            Previous
                                     </Link>
                                 ) : (
                                     <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
@@ -484,16 +498,16 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                 <span className="rounded border px-3 py-1">
                                     {transactions.current_page}
                                 </span>
-                                
-                                {/* Next Page */}
+
+                                    {/* Next Page */}
                                 {transactions.next_page_url ? (
                                     <Link
                                         href={transactions.next_page_url}
                                         preserveState
                                         preserveScroll
                                         className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
-                                    >
-                                        Next
+                                        >
+                                            Next
                                     </Link>
                                 ) : (
                                     <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
@@ -590,7 +604,7 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                 </Dialog>
 
                 {/* Edit Transaction Modal */}
-                <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
+                <Dialog open={isEditModalOpen} onOpenChange={() => setIsEditModalOpen(false)}>
                     <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
@@ -600,12 +614,6 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                         </DialogHeader>
 
                         <form onSubmit={handleEditSubmit} className="space-y-4">
-                            {/* Error Display */}
-                            {errors.error && (
-                                <div className="rounded-md bg-red-50 p-4">
-                                    <div className="text-sm text-red-700">{errors.error}</div>
-                                </div>
-                            )}
 
                             {/* Transaction Info */}
                             {selectedTransaction && (
@@ -674,20 +682,20 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                                 value={item.quantity}
                                                 onChange={(e) => updateEditItem(index, 'quantity', e.target.value)}
                                                 min="1"
-                                                required
-                                            />
+                                    required
+                                />
                                             <InputError message={errors[`items.${index}.quantity`]} className="mt-1" />
-                                        </div>
+                            </div>
                                         <div className="col-span-3">
-                                            <Input
-                                                type="number"
-                                                step="0.01"
+                                <Input
+                                    type="number"
+                                    step="0.01"
                                                 placeholder="Unit Price"
                                                 value={item.unit_price}
                                                 onChange={(e) => updateEditItem(index, 'unit_price', e.target.value)}
-                                                min="0.01"
-                                                required
-                                            />
+                                    min="0.01"
+                                    required
+                                />
                                             <InputError message={errors[`items.${index}.unit_price`]} className="mt-1" />
                                         </div>
                                         <div className="col-span-1">
@@ -736,7 +744,28 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                             {selectedTransaction && selectedTransaction.payments && selectedTransaction.payments.length > 0 && (
                                 <div className="rounded-lg bg-amber-50 p-3 border border-amber-200">
                                     <div className="text-sm text-amber-800">
-                                        <strong>Note:</strong> This transaction has payments. Financial amounts cannot be changed, but you can edit date and notes.
+                                        <strong>Note:</strong> This transaction has payments totaling {formatCurrency(selectedTransaction.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0))}. 
+                                        You can edit items but the new total amount must be at least the amount already paid.
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Display */}
+                            {Object.keys(errors).length > 0 && (
+                                <div className="rounded-md bg-red-50 p-4 border border-red-200">
+                                    <div className="flex">
+                                        <div className="ml-3">
+                                            <h3 className="text-sm font-medium text-red-800">
+                                                There were errors with your submission
+                                            </h3>
+                                            <div className="mt-2 text-sm text-red-700">
+                                                <ul className="list-disc pl-5 space-y-1">
+                                                    {Object.entries(errors).map(([key, message]) => (
+                                                        <li key={key}>{message}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

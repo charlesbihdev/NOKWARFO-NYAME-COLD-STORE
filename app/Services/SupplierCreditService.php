@@ -174,21 +174,34 @@ class SupplierCreditService
             $updateData['description'] = $data['description'];
         }
         
-        // Only allow financial changes if no payments exist
-        if (!$hasPayments) {
-            if (isset($data['amount_owed'])) {
-                $updateData['amount_owed'] = $data['amount_owed'];
+        // Allow amount changes but validate against payments
+        if (isset($data['amount_owed'])) {
+            if ($hasPayments) {
+                $totalPaid = $transaction->payments()->sum('payment_amount');
+                if ($data['amount_owed'] < $totalPaid) {
+                    throw new Exception("Cannot reduce total amount below paid amount. Total paid: GHC " . number_format($totalPaid, 2) . ". New total must be at least GHC " . number_format($totalPaid, 2));
+                }
+                // Update remaining balance when amount changes
+                $updateData['remaining_balance'] = $data['amount_owed'] - $totalPaid;
             }
-        } else if (isset($data['amount_owed']) && $data['amount_owed'] != $transaction->amount_owed) {
-            throw new Exception('Cannot change amount when payments have been made. You can edit date and notes only.');
+            $updateData['amount_owed'] = $data['amount_owed'];
         }
 
         $transaction->update($updateData);
 
-        // Update transaction items only if no payments exist
+        // Update transaction items with payment validation
         if (isset($data['items']) && is_array($data['items'])) {
+            // Calculate new total from items
+            $newTotal = collect($data['items'])->sum(function ($item) {
+                return $item['quantity'] * $item['unit_price'];
+            });
+            
+            // If payments exist, validate new total >= total paid BEFORE making any changes
             if ($hasPayments) {
-                throw new Exception('Cannot change items when payments have been made. You can edit date and notes only.');
+                $totalPaid = $transaction->payments()->sum('payment_amount');
+                if ($newTotal < $totalPaid) {
+                    throw new Exception("Cannot reduce total amount below paid amount. Total paid: GHC " . number_format($totalPaid, 2) . ". New total must be at least GHC " . number_format($totalPaid, 2));
+                }
             }
             
             // Delete existing items
@@ -203,6 +216,13 @@ class SupplierCreditService
                     'total_amount' => $item['quantity'] * $item['unit_price'],
                 ]);
             }
+            
+            // Update amount_owed and remaining_balance with the new total
+            $totalPaid = $transaction->payments()->sum('payment_amount');
+            $transaction->update([
+                'amount_owed' => $newTotal,
+                'remaining_balance' => $newTotal - $totalPaid,
+            ]);
         }
 
         return $transaction->fresh(['items']);

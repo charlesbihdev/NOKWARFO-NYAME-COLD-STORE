@@ -132,9 +132,9 @@ class SupplierController extends Controller
                 ]);
             }
 
-            return redirect()->back()->with('success', 'Credit transaction created successfully');
+            return back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
         }
     }
 
@@ -183,10 +183,11 @@ class SupplierController extends Controller
                 })
                 ->join(', ');
 
+
+
             $this->creditService->updateCreditTransaction($transaction, [
                 'transaction_date' => $validated['transaction_date'],
                 'description' => $description,
-                'amount_owed' => $totalAmount,
                 'notes' => $validated['notes'],
                 'items' => $validated['items'],
             ]);
