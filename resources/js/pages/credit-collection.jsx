@@ -86,75 +86,6 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
             <div className="min-h-screen space-y-6 bg-gray-100 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Credit Collection & Debt Management</h1>
-                    <div className="flex items-center space-x-4">
-                        <Dialog open={open} onOpenChange={setOpen}>
-                            <DialogTrigger asChild>
-                                <Button>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Record Collection
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                    <DialogTitle>Record Credit Collection</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="customer" className="text-right">
-                                            Customer
-                                        </Label>
-                                        <Select value={data.customer_id} onValueChange={(value) => setData('customer_id', value)} disabled>
-                                            <SelectTrigger className="col-span-3">
-                                                <SelectValue placeholder="Select customer" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {customers.map((customer) => (
-                                                    <SelectItem key={customer.id} value={customer.id}>
-                                                        {customer.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.customer_id && <InputError message={errors.customer_id} className="mt-2" />}
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="amount" className="text-right">
-                                            Amount (GH₵)
-                                        </Label>
-                                        <div className="col-span-3">
-                                            <Input
-                                                id="amount"
-                                                type="number"
-                                                className="w-full"
-                                                placeholder="0.00"
-                                                value={data.amount_collected}
-                                                onChange={(e) => setData('amount_collected', e.target.value)}
-                                                required
-                                            />
-                                            {errors.amount_collected && <InputError message={errors.amount_collected} className="mt-2" />}
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="notes" className="text-right">
-                                            Notes
-                                        </Label>
-                                        <div className="col-span-3">
-                                            <Input
-                                                id="notes"
-                                                placeholder="Optional notes"
-                                                value={data.notes}
-                                                onChange={(e) => setData('notes', e.target.value)}
-                                            />
-                                            {errors.notes && <InputError message={errors.notes} className="mt-2" />}
-                                        </div>
-                                    </div>
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Recording...' : 'Record Collection'}
-                                    </Button>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -215,7 +146,6 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                     <TableRow>
                                         <TableHead>Customer Name</TableHead>
                                         <TableHead>Amount Collected</TableHead>
-                                        {/* <TableHead>Debt Remaining</TableHead> */}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -225,15 +155,11 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                             <TableCell className="font-medium text-green-600">
                                                 GH₵{parseFloat(collection.amount_collected).toFixed(2)}
                                             </TableCell>
-                                            {/* <TableCell className={collection.debt_left > 0 ? 'font-medium text-orange-600' : 'text-green-600'}>
-                                                {collection.debt_left > 0 ? `GH₵${parseFloat(collection.debt_left).toFixed(2)}` : 'Cleared'}
-                                            </TableCell> */}
                                         </TableRow>
                                     ))}
                                     <TableRow className="bg-green-50">
                                         <TableCell className="font-bold">Total Collected</TableCell>
                                         <TableCell className="font-bold text-green-600">GH₵{totalCollected.toFixed(2)}</TableCell>
-                                        <TableCell></TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
@@ -374,7 +300,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                                             {debt.days_overdue} days
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={debt.days_overdue > 14 ? 'destructive' : 'secondary'}>
+                                            <Badge className={debt.days_overdue > 14 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-orange-600 text-white hover:bg-orange-700'}>
                                                 {debt.days_overdue > 14 ? 'Critical' : 'Overdue'}
                                             </Badge>
                                         </TableCell>
@@ -396,6 +322,68 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                         </Table>
                     </CardContent>
                 </Card>
+
+                {/* Collection Modal */}
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Record Credit Collection</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="customer" className="text-right">
+                                    Customer
+                                </Label>
+                                <Select value={data.customer_id} onValueChange={(value) => setData('customer_id', value)} disabled>
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customers.map((customer) => (
+                                            <SelectItem key={customer.id} value={customer.id}>
+                                                {customer.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.customer_id && <InputError message={errors.customer_id} className="mt-2" />}
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="amount" className="text-right">
+                                    Amount (GH₵)
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        className="w-full"
+                                        placeholder="0.00"
+                                        value={data.amount_collected}
+                                        onChange={(e) => setData('amount_collected', e.target.value)}
+                                        required
+                                    />
+                                    {errors.amount_collected && <InputError message={errors.amount_collected} className="mt-2" />}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="notes" className="text-right">
+                                    Notes
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="notes"
+                                        placeholder="Optional notes"
+                                        value={data.notes}
+                                        onChange={(e) => setData('notes', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <Button type="submit" disabled={processing}>
+                                {processing ? 'Recording...' : 'Record Collection'}
+                            </Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

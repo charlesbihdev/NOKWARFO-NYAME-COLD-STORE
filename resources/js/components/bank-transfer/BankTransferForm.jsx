@@ -18,6 +18,16 @@ export default function BankTransferForm({ tags, lastBalance, isOpen, setIsOpen 
         notes: '',
     });
 
+    // Update form when lastBalance prop changes
+    useEffect(() => {
+        setData((prev) => ({
+            ...prev,
+            previous_balance: lastBalance.toString(),
+            total_balance: lastBalance.toString(),
+            current_balance: lastBalance.toString(),
+        }));
+    }, [lastBalance]);
+
     // Auto-calculate balances
     useEffect(() => {
         const prevBalance = parseFloat(data.previous_balance) || 0;
@@ -37,6 +47,7 @@ export default function BankTransferForm({ tags, lastBalance, isOpen, setIsOpen 
         post(route('bank-transfers.store'), {
             preserveScroll: true,
             preserveState: true,
+            only: ['bank_transfers', 'last_balance', 'errors', 'flash'],
             onSuccess: () => {
                 reset();
                 setIsOpen(false);
@@ -49,11 +60,11 @@ export default function BankTransferForm({ tags, lastBalance, isOpen, setIsOpen 
             <DialogTrigger asChild>
                 <Button>Record Transfer</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-h-[96vh] max-w-2xl overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Record Bank Transfer</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="date">Date</Label>
@@ -125,17 +136,24 @@ export default function BankTransferForm({ tags, lastBalance, isOpen, setIsOpen 
                             <Label htmlFor="notes">Notes</Label>
                             <textarea
                                 id="notes"
-                                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[100px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[60px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                 value={data.notes}
                                 onChange={(e) => setData('notes', e.target.value)}
                                 placeholder="Enter any additional notes..."
+                                rows={2}
                             />
                             {errors.notes && <div className="text-sm text-red-500">{errors.notes}</div>}
                         </div>
                     </div>
-                    <Button type="submit" disabled={processing}>
-                        {processing ? 'Recording...' : 'Record Transfer'}
-                    </Button>
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {processing ? 'Recording...' : 'Record Transfer'}
+                        </Button>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

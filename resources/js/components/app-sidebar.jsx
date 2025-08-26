@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
-import { Banknote, BarChart3, CreditCard, Home, Menu, Package, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
+import { Banknote, BarChart3, CreditCard, Home, Menu, Package, ShoppingCart, TrendingUp, Truck, Users, MapPin } from 'lucide-react';
 
 const menuItems = [
     { id: 'dashboard.index', label: 'Dashboard', icon: Home, section: 'main' },
@@ -10,6 +10,7 @@ const menuItems = [
     { id: 'customers.index', label: 'Customers', icon: Users, section: 'setup' },
     // { id: "inventory-management.index", label: "Inventory Management", icon: Archive, section: "inventory" },
     { id: 'stock-control.index', label: 'Stock Control', icon: Truck, section: 'inventory' },
+    { id: 'trip-estimations.index', label: 'Trip Profit Estimator', icon: MapPin, section: 'inventory' },
     // { id: "sales.index", label: "Sales & Transactions", icon: ShoppingCart, section: "sales" },
     { id: 'sales-transactions.index', label: 'Sales Transactions', icon: ShoppingCart, section: 'sales' },
     { id: 'daily-sales-report.index', label: 'Daily Sales Report', icon: BarChart3, section: 'sales' },
@@ -58,7 +59,9 @@ function AppSidebar({ isCollapsed, setIsCollapsed }) {
                                             className={cn(
                                                 'flex h-10 w-full items-center gap-2 rounded-md px-2 transition-colors',
                                                 isCollapsed ? 'justify-center' : 'justify-start',
-                                                route().current(item.id)
+                                                route().current(item.id) || 
+                                                (item.id === 'customers.index' && route().current('customers.*')) ||
+                                                (item.id === 'suppliers.index' && route().current('suppliers.*'))
                                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                                     : 'text-gray-700 hover:bg-gray-100',
                                             )}

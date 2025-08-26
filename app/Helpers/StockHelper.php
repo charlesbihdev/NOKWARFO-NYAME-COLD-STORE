@@ -31,6 +31,39 @@ class StockHelper
         return "0";
     }
 
+    // Parse carton/line format string and convert to total lines
+    // Examples: "5C2L" = 5 cartons + 2 lines, "10C" = 10 cartons, "15L" = 15 lines
+    public static function parseCartonLineFormat($input, $lines_per_carton)
+    {
+        $input = trim($input);
+        
+        // If it's just a number, treat as lines
+        if (is_numeric($input)) {
+            return (int) $input;
+        }
+        
+        $totalLines = 0;
+        
+        // Match cartons: 5C, 10C, etc.
+        if (preg_match('/(\d+)C/i', $input, $matches)) {
+            $cartons = (int) $matches[1];
+            $totalLines += $cartons * $lines_per_carton;
+        }
+        
+        // Match lines: 2L, 5L, etc.
+        if (preg_match('/(\d+)L/i', $input, $matches)) {
+            $lines = (int) $matches[1];
+            $totalLines += $lines;
+        }
+        
+        // If no matches found, try to parse as just a number
+        if ($totalLines === 0 && is_numeric($input)) {
+            $totalLines = (int) $input;
+        }
+        
+        return $totalLines;
+    }
+
     // Calculate price per carton from price per line
     public static function pricePerCarton($price_per_line, $lines_per_carton)
     {

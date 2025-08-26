@@ -4,23 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function AddStockModal({ isOpen, onClose, selectedProduct, data, setData, suppliers, errors, processing, onSubmit }) {
-    function getQuantityInputProps() {
-        if (data.type === 'adjusted') {
-            return {
-                type: 'number',
-                step: 1,
-                placeholder: 'e.g. -5 for loss, 5 for gain',
-                min: undefined,
-            };
-        }
-        return {
-            type: 'number',
-            step: 1,
-            placeholder: 'Enter quantity',
-            min: 1,
-        };
-    }
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl">
@@ -42,7 +25,6 @@ export default function AddStockModal({ isOpen, onClose, selectedProduct, data, 
                             >
                                 <option value="received">Stock In</option>
                                 <option value="sold">Stock Out</option>
-                                <option value="adjusted">Adjusted</option>
                             </select>
                             {errors.type && <div className="mt-1 text-xs text-red-500">{errors.type}</div>}
                         </div>
@@ -54,22 +36,21 @@ export default function AddStockModal({ isOpen, onClose, selectedProduct, data, 
                         <div className="col-span-3">
                             <Input
                                 id="quantity"
-                                {...getQuantityInputProps()}
+                                type="text"
+                                placeholder="e.g., 5C2L, 10C, 15L, or 20"
                                 value={data.quantity}
                                 onChange={(e) => setData('quantity', e.target.value)}
                                 required
                             />
+                            <div className="mt-1 text-xs text-gray-500">
+                                Format: 5C2L = 5 cartons + 2 lines, 10C = 10 cartons, 15L = 15 lines, or just a number
+                            </div>
                             {errors.quantity && <div className="mt-1 text-xs text-red-500">{errors.quantity}</div>}
-                            {data.type === 'adjusted' && (
-                                <div className="text-muted-foreground mt-1 text-xs">
-                                    Use a negative number for loss (e.g. -5 for damaged/expired), positive for gain/correction.
-                                </div>
-                            )}
                         </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="unit_cost" className="text-right">
-                            Unit Cost (GH₵) *
+                            Unit Cost per Carton (GH₵) *
                         </Label>
                         <div className="col-span-3">
                             <Input

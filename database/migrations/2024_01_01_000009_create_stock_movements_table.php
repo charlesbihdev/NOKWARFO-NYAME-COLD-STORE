@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
-            $table->enum('type', ['received', 'sold', 'adjusted']);
+            $table->enum('type', ['received', 'sold']);
             $table->integer('quantity');
             $table->decimal('unit_cost', 10, 2);
             $table->decimal('total_cost', 10, 2);

@@ -83,6 +83,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        $user = User::firstOrCreate(
+            ['email' => 'charlesowusubih@gmail.com'],
+            [
+                'name' => 'Karl',
+                'password' => bcrypt('@Charles2004'),
+            ]
+        );
+
         // Create sample bank transfers
         BankTransfer::create([
             'date' => now(),

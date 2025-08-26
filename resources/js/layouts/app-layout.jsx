@@ -10,7 +10,6 @@ export default function AppLayout({ children, breadcrumbs = [] }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    console.log(isCollapsed);
 
     return (
         <SidebarProvider>

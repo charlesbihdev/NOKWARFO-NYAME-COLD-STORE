@@ -11,20 +11,44 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('supplier_transactions', function (Blueprint $table) {
+        // Create supplier_credit_transactions table
+        Schema::create('supplier_credit_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->date('transaction_date');
-            $table->string('reference_number')->nullable(); // Optional reference for the transaction
-            $table->decimal('previous_balance', 12, 2)->default(0); // Balance before this transaction
-            $table->decimal('total_amount', 12, 2)->default(0); // Total purchase amount for this transaction
-            $table->decimal('payment_amount', 12, 2)->default(0); // Payment made in this transaction
-            $table->decimal('current_balance', 12, 2)->default(0); // Balance after this transaction
+            $table->text('description')->nullable();
+            $table->decimal('amount_owed', 12, 2); // Total amount owed for this transaction
+            $table->boolean('is_fully_paid')->default(false); // Track if transaction is fully paid
             $table->text('notes')->nullable();
-            $table->enum('type', ['purchase', 'payment', 'adjustment'])->default('purchase');
             $table->timestamps();
 
             $table->index(['supplier_id', 'transaction_date']);
+        });
+
+        // Create supplier_credit_transaction_items table
+        Schema::create('supplier_credit_transaction_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions')->onDelete('cascade');
+            $table->string('product_name');
+            $table->integer('quantity');
+            $table->decimal('unit_price', 12, 2);
+            $table->decimal('total_amount', 12, 2);
+            $table->timestamps();
+        });
+
+        // Create supplier_payments table
+        Schema::create('supplier_payments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions')->onDelete('cascade');
+            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
+            $table->date('payment_date');
+            $table->decimal('payment_amount', 12, 2);
+            $table->string('payment_method')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+
+            $table->index(['supplier_id', 'payment_date']);
+            $table->index('supplier_credit_transaction_id');
         });
     }
 
@@ -33,6 +57,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('supplier_transactions');
+        Schema::dropIfExists('supplier_payments');
+        Schema::dropIfExists('supplier_credit_transaction_items');
+        Schema::dropIfExists('supplier_credit_transactions');
     }
 };
