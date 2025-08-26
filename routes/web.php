@@ -16,6 +16,7 @@ use App\Http\Controllers\CreditCollectionController;
 use App\Http\Controllers\DailyCollectionsController;
 use App\Http\Controllers\DailySalesReportController;
 use App\Http\Controllers\SalesTransactionController;
+use App\Http\Controllers\TripEstimationController;
 // use App\Http\Controllers\ProductManagementController;
 
 Route::get('/', function () {
@@ -42,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/bank-transfer-tags', [BankTransferTagController::class, 'store'])->name('bank-transfer-tags.store');
     Route::delete('/bank-transfer-tags/{tag}', [BankTransferTagController::class, 'destroy'])->name('bank-transfer-tags.destroy');
     Route::resource('expenses', ExpenseController::class);
+    Route::resource('trip-estimations', TripEstimationController::class);
 
 
     // New debt management routes
