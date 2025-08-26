@@ -58,7 +58,9 @@ function AppSidebar({ isCollapsed, setIsCollapsed }) {
                                             className={cn(
                                                 'flex h-10 w-full items-center gap-2 rounded-md px-2 transition-colors',
                                                 isCollapsed ? 'justify-center' : 'justify-start',
-                                                route().current(item.id)
+                                                route().current(item.id) || 
+                                                (item.id === 'customers.index' && route().current('customers.*')) ||
+                                                (item.id === 'suppliers.index' && route().current('suppliers.*'))
                                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                                     : 'text-gray-700 hover:bg-gray-100',
                                             )}

@@ -52,8 +52,10 @@ export default function BankTransfersTable({ bankTransfers, onDeleteClick }) {
                                     <TableCell>{transfer.tag ? transfer.tag.name : 'No tag'}</TableCell>
                                     <TableCell className="font-medium">GH₵{transfer.current_balance || 0}</TableCell>
                                     <TableCell className="max-w-[200px]">
-                                        <div className="flex items-center justify-between gap-2">
                                             <span className="truncate">{transfer.notes || '-'}</span>
+                                           
+                                    </TableCell>
+                                    <TableCell className="max-w-[200px]">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -62,7 +64,6 @@ export default function BankTransfersTable({ bankTransfers, onDeleteClick }) {
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
-                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))

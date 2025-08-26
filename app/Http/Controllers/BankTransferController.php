@@ -18,10 +18,11 @@ class BankTransferController extends Controller
 
         $today = now()->toDateString();
 
-        // Default to today if no dates provided
+        // Default to current month if no dates provided
         if (!$startDate && !$endDate) {
-            $startDate = $today;
-            $endDate = $today;
+            $now = now();
+            $startDate = $now->startOfMonth()->format('Y-m-d');
+            $endDate = $now->endOfMonth()->format('Y-m-d');
         } elseif ($startDate && !$endDate) {
             $endDate = $startDate;
         } elseif (!$startDate && $endDate) {
@@ -34,7 +35,8 @@ class BankTransferController extends Controller
         }
 
         $bank_transfers = BankTransfer::with('tag')
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereDate('date', '>=', $startDate)
+            ->whereDate('date', '<=', $endDate)
             ->orderByDesc('date')
             ->orderByDesc('created_at')
             ->paginate(25)

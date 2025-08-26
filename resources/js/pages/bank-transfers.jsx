@@ -18,10 +18,12 @@ export default function BankTransfers({
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [deleteTransferId, setDeleteTransferId] = useState(null);
     
-    // Default to today if no dates provided
-    const today = new Date().toISOString().slice(0, 10);
-    const [startDate, setStartDate] = useState(start_date || today);
-    const [endDate, setEndDate] = useState(end_date || today);
+    // Default to current month if no dates provided
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const [startDate, setStartDate] = useState(start_date || currentMonthStart);
+    const [endDate, setEndDate] = useState(end_date || currentMonthEnd);
 
     // Handle date changes - reset page params to 1 on new date filter
     const handleDateChange = (value, type) => {
