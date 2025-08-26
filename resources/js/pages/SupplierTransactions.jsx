@@ -214,8 +214,7 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
             const updatedItems = [...editItems];
             updatedItems[index] = {
                 ...updatedItems[index],
-                product_name: product.name,
-                unit_price: product.unit_cost_price || 0
+                product_name: product.name
             };
             setEditItems(updatedItems);
             setData('items', updatedItems);

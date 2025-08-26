@@ -27,7 +27,7 @@ class SupplierController extends Controller
             });
 
         // Get products for dropdown
-        $products = \App\Models\Product::select('id', 'name', 'unit_cost_price', 'unit_selling_price')
+        $products = \App\Models\Product::select('id', 'name')
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -266,7 +266,7 @@ class SupplierController extends Controller
             });
 
         // Get products for dropdown
-        $products = \App\Models\Product::select('id', 'name', 'unit_cost_price', 'unit_selling_price')
+        $products = \App\Models\Product::select('id', 'name')
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
