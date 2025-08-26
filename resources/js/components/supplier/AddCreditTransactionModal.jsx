@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError';
 import { useForm } from '@inertiajs/react';
 import { Calendar, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-function AddCreditTransactionModal({ isOpen, onClose, supplier, errors = {} }) {
+function AddCreditTransactionModal({ isOpen, onClose, supplier, products = [], errors = {} }) {
     const [items, setItems] = useState([{ product_name: '', quantity: 1, unit_price: 0 }]);
 
     const { data, setData, post, processing, reset, clearErrors } = useForm({
@@ -92,6 +93,20 @@ function AddCreditTransactionModal({ isOpen, onClose, supplier, errors = {} }) {
         setData('items', newItems);
     }
 
+    function handleProductSelect(index, productId) {
+        const product = products.find(p => p.id == productId);
+        if (product) {
+            const updatedItems = [...items];
+            updatedItems[index] = {
+                ...updatedItems[index],
+                product_name: product.name,
+                unit_price: product.unit_cost_price || 0
+            };
+            setItems(updatedItems);
+            setData('items', updatedItems);
+        }
+    }
+
     if (!supplier) return null;
 
     // Calculate total amount
@@ -154,12 +169,21 @@ function AddCreditTransactionModal({ isOpen, onClose, supplier, errors = {} }) {
                         {items.map((item, index) => (
                             <div key={index} className="grid grid-cols-12 gap-2 rounded-lg border p-3">
                                 <div className="col-span-5">
-                                    <Input
-                                        placeholder="Product name (e.g., Fish, Meat)"
-                                        value={item.product_name}
-                                        onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                                        required
-                                    />
+                                    <Select
+                                        value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
+                                        onValueChange={(productId) => handleProductSelect(index, productId)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a product" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {products.map((product) => (
+                                                <SelectItem key={product.id} value={product.id.toString()}>
+                                                    {product.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     {errors[`items.${index}.product_name`] && (
                                         <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
                                     )}

@@ -13,6 +13,7 @@ class TripEstimationItem extends Model
     protected $fillable = [
         'trip_estimation_id',
         'product_name',
+        'supplier_name',
         'quantity',
         'unit_cost_price',
         'total_cost_price',

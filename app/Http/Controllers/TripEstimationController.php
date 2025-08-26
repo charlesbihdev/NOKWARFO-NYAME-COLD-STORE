@@ -60,6 +60,7 @@ class TripEstimationController extends Controller
                     'items' => $trip->items->map(function ($item) {
                         return [
                             'product_name' => $item->product_name,
+                            'supplier_name' => $item->supplier_name,
                             'quantity' => $item->quantity,
                             'unit_cost_price' => $item->unit_cost_price,
                             'unit_selling_price' => $item->unit_selling_price,
@@ -81,11 +82,25 @@ class TripEstimationController extends Controller
             'total_trips' => $overviewQuery->count(),
         ];
 
+        // Get products for dropdown
+        $products = \App\Models\Product::select('id', 'name', 'unit_cost_price', 'unit_selling_price')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Get suppliers for dropdown
+        $suppliers = \App\Models\Supplier::select('id', 'name')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('TripEstimations', [
             'trips' => $trips,
             'overview' => $overview,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'products' => $products,
+            'suppliers' => $suppliers,
         ]);
     }
 
@@ -100,6 +115,7 @@ class TripEstimationController extends Controller
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
             'items.*.product_name' => 'required|string|max:255',
+            'items.*.supplier_name' => 'nullable|string|max:255',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_cost_price' => 'required|numeric|min:0',
             'items.*.unit_selling_price' => 'required|numeric|min:0',
@@ -121,6 +137,7 @@ class TripEstimationController extends Controller
             foreach ($validated['items'] as $itemData) {
                 $item = new TripEstimationItem([
                     'product_name' => $itemData['product_name'],
+                    'supplier_name' => $itemData['supplier_name'] ?? null,
                     'quantity' => $itemData['quantity'],
                     'unit_cost_price' => $itemData['unit_cost_price'],
                     'unit_selling_price' => $itemData['unit_selling_price'],
@@ -149,6 +166,7 @@ class TripEstimationController extends Controller
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
             'items.*.product_name' => 'required|string|max:255',
+            'items.*.supplier_name' => 'nullable|string|max:255',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_cost_price' => 'required|numeric|min:0',
             'items.*.unit_selling_price' => 'required|numeric|min:0',
@@ -172,6 +190,7 @@ class TripEstimationController extends Controller
             foreach ($validated['items'] as $itemData) {
                 $item = new TripEstimationItem([
                     'product_name' => $itemData['product_name'],
+                    'supplier_name' => $itemData['supplier_name'] ?? null,
                     'quantity' => $itemData['quantity'],
                     'unit_cost_price' => $itemData['unit_cost_price'],
                     'unit_selling_price' => $itemData['unit_selling_price'],

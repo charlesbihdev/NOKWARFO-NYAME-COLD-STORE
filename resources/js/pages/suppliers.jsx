@@ -14,7 +14,7 @@ import AddCreditTransactionModal from '../components/supplier/AddCreditTransacti
 import EditSupplierModal from '../components/supplier/EditSupplierModal';
 import SupplierBalanceCard from '../components/supplier/SupplierBalanceCard';
 
-function Suppliers({ suppliers = [], errors = {} }) {
+function Suppliers({ suppliers = [], products = [], errors = {} }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isCreditTransactionModalOpen, setIsCreditTransactionModalOpen] = useState(false);
@@ -281,6 +281,7 @@ function Suppliers({ suppliers = [], errors = {} }) {
                         setSelectedSupplier(null);
                     }}
                     supplier={selectedSupplier}
+                    products={products}
                     errors={errors}
                 />
             </div>
