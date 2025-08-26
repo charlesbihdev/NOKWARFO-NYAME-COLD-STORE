@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+
         // Create supplier_credit_transactions table
         Schema::create('supplier_credit_transactions', function (Blueprint $table) {
             $table->id();
@@ -28,7 +29,7 @@ return new class extends Migration
         // Create supplier_credit_transaction_items table
         Schema::create('supplier_credit_transaction_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions')->onDelete('cascade');
+            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions', 'id', 'fk_supplier_items_transaction')->onDelete('cascade');
             $table->string('product_name');
             $table->integer('quantity');
             $table->decimal('unit_price', 12, 2);
@@ -39,8 +40,8 @@ return new class extends Migration
         // Create supplier_payments table
         Schema::create('supplier_payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions')->onDelete('cascade');
-            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
+            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions', 'id', 'fk_supplier_payments_transaction')->onDelete('cascade');
+            $table->foreignId('supplier_id')->constrained('suppliers', 'id', 'fk_supplier_payments_supplier')->onDelete('cascade');
             $table->date('payment_date');
             $table->decimal('payment_amount', 12, 2);
             $table->string('payment_method')->nullable();
