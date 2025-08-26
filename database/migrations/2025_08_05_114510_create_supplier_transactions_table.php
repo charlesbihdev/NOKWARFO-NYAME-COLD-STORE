@@ -11,10 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Drop existing tables if they exist (in case of partial migration)
-        Schema::dropIfExists('supplier_payments');
-        Schema::dropIfExists('supplier_credit_transaction_items');
-        Schema::dropIfExists('supplier_credit_transactions');
 
         // Create supplier_credit_transactions table
         Schema::create('supplier_credit_transactions', function (Blueprint $table) {
