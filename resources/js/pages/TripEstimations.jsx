@@ -33,7 +33,9 @@ export default function TripEstimations({
     trips = [], 
     overview = {},
     start_date = '',
-    end_date = ''
+    end_date = '',
+    products = [],
+    suppliers = []
 }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editTrip, setEditTrip] = useState(null);
@@ -319,6 +321,8 @@ export default function TripEstimations({
                 <AddTripModal 
                     isOpen={isAddModalOpen} 
                     onClose={() => setIsAddModalOpen(false)} 
+                    products={products}
+                    suppliers={suppliers}
                 />
 
                 {editTrip && (
@@ -326,6 +330,8 @@ export default function TripEstimations({
                         isOpen={!!editTrip} 
                         onClose={() => setEditTrip(null)} 
                         trip={editTrip}
+                        products={products}
+                        suppliers={suppliers}
                     />
                 )}
 
@@ -389,6 +395,10 @@ export default function TripEstimations({
                                                     <div className="min-w-[120px]">
                                                         <div className="text-xs text-gray-600">Product</div>
                                                         <div className="font-medium">{it.product_name}</div>
+                                                    </div>
+                                                    <div className="min-w-[120px]">
+                                                        <div className="text-xs text-gray-600">Supplier</div>
+                                                        <div className="font-medium">{it.supplier_name || '-'}</div>
                                                     </div>
                                                     <div className="min-w-[60px]">
                                                         <div className="text-xs text-gray-600">Qty</div>

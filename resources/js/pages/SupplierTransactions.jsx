@@ -17,7 +17,7 @@ import { Link } from '@inertiajs/react';
 import InputError from '@/components/InputError';
 
 
-function SupplierTransactions({ supplier, transactions, start_date = '', end_date = '' }) {
+function SupplierTransactions({ supplier, transactions, start_date = '', end_date = '', products = [] }) {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -206,6 +206,20 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
         newItems[index] = { ...newItems[index], [field]: value };
         setEditItems(newItems);
         setData('items', newItems);
+    }
+
+    function handleProductSelect(index, productId) {
+        const product = products.find(p => p.id == productId);
+        if (product) {
+            const updatedItems = [...editItems];
+            updatedItems[index] = {
+                ...updatedItems[index],
+                product_name: product.name,
+                unit_price: product.unit_cost_price || 0
+            };
+            setEditItems(updatedItems);
+            setData('items', updatedItems);
+        }
     }
 
     function closePaymentModal() {
@@ -667,12 +681,21 @@ function SupplierTransactions({ supplier, transactions, start_date = '', end_dat
                                 {editItems.map((item, index) => (
                                     <div key={index} className="grid grid-cols-12 gap-2 rounded-lg border p-3">
                                         <div className="col-span-5">
-                                            <Input
-                                                placeholder="Product name (e.g., Fish, Meat)"
-                                                value={item.product_name}
-                                                onChange={(e) => updateEditItem(index, 'product_name', e.target.value)}
-                                                required
-                                            />
+                                            <Select
+                                                value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
+                                                onValueChange={(productId) => handleProductSelect(index, productId)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a product" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {products.map((product) => (
+                                                        <SelectItem key={product.id} value={product.id.toString()}>
+                                                            {product.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
                                         </div>
                                         <div className="col-span-3">

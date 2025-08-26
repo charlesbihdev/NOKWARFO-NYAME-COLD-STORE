@@ -3,14 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/InputError';
 import { useForm } from '@inertiajs/react';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-function AddTripModal({ isOpen, onClose, errors = {} }) {
+function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors = {} }) {
     const [items, setItems] = useState([{ 
         product_name: '', 
+        supplier_name: '',
         quantity: 1, 
         unit_cost_price: 0, 
         unit_selling_price: 0 
@@ -28,7 +30,7 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
 
     useEffect(() => {
         if (isOpen) {
-            const initialItems = [{ product_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }];
+            const initialItems = [{ product_name: '', supplier_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }];
             setItems(initialItems);
             reset();
             clearErrors();
@@ -58,7 +60,7 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
             onSuccess: () => {
                 reset();
                 clearErrors();
-                setItems([{ product_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }]);
+                setItems([{ product_name: '', supplier_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }]);
                 onClose();
             },
             preserveScroll: true,
@@ -70,12 +72,12 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
     function handleClose() {
         reset();
         clearErrors();
-        setItems([{ product_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }]);
+        setItems([{ product_name: '', supplier_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }]);
         onClose();
     }
 
     function addItem() {
-        const newItems = [...items, { product_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }];
+        const newItems = [...items, { product_name: '', supplier_name: '', quantity: 1, unit_cost_price: 0, unit_selling_price: 0 }];
         setItems(newItems);
         setData('items', newItems);
     }
@@ -85,6 +87,21 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
             const newItems = items.filter((_, i) => i !== index);
             setItems(newItems);
             setData('items', newItems);
+        }
+    }
+
+    function handleProductSelect(index, productId) {
+        const product = products.find(p => p.id == productId);
+        if (product) {
+            const updatedItems = [...items];
+            updatedItems[index] = {
+                ...updatedItems[index],
+                product_name: product.name,
+                unit_cost_price: product.unit_cost_price || 0,
+                unit_selling_price: product.unit_selling_price || 0
+            };
+            setItems(updatedItems);
+            setData('items', updatedItems);
         }
     }
 
@@ -222,16 +239,51 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
                                         
                                         <div className="space-y-3">
                                             <div>
-                                                <Label className="text-sm font-medium">Product Name</Label>
-                                                <Input
-                                                    placeholder="Enter product name"
-                                                    value={item.product_name}
-                                                    onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                                                    required
-                                                    className="mt-1"
-                                                />
+                                                <Label className="text-sm font-medium">Product *</Label>
+                                                <Select
+                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
+                                                >
+                                                    <SelectTrigger className="mt-1">
+                                                        <SelectValue placeholder="Select a product" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map((product) => (
+                                                            <SelectItem key={product.id} value={product.id.toString()}>
+                                                                {product.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <Label className="text-sm font-medium">Supplier</Label>
+                                                <Select
+                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(supplierId) => {
+                                                        const supplier = suppliers.find(s => s.id == supplierId);
+                                                        if (supplier) {
+                                                            updateItem(index, 'supplier_name', supplier.name);
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="mt-1">
+                                                        <SelectValue placeholder="Select a supplier" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {suppliers.map((supplier) => (
+                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                                                {supplier.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors[`items.${index}.supplier_name`] && (
+                                                    <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
                                                 )}
                                             </div>
                                             
@@ -310,20 +362,55 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
 
                                                                                                               {/* Desktop Layout - Compact with shared rows (XL screens) */}
                                      <div className="hidden xl:block xl:p-4 xl:space-y-3">
-                                         <div className="grid grid-cols-4 gap-4 items-end">
-                                             <div className="col-span-2">
-                                                 <Label className="text-sm font-medium mb-2 block">Product Name</Label>
-                                                 <Input
-                                                     placeholder="Enter product name"
-                                                     value={item.product_name}
-                                                     onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                                                     required
-                                                     className="w-full h-12"
-                                                 />
-                                                 {errors[`items.${index}.product_name`] && (
-                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
-                                                 )}
-                                             </div>
+                                                                                 <div className="grid grid-cols-4 gap-4 items-end">
+                                            <div className="col-span-1">
+                                                <Label className="text-sm font-medium mb-2 block">Product *</Label>
+                                                <Select
+                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
+                                                >
+                                                    <SelectTrigger className="w-full h-12">
+                                                        <SelectValue placeholder="Select a product" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map((product) => (
+                                                            <SelectItem key={product.id} value={product.id.toString()}>
+                                                                {product.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors[`items.${index}.product_name`] && (
+                                                    <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
+                                                )}
+                                            </div>
+
+                                            <div className="col-span-1">
+                                                <Label className="text-sm font-medium mb-2 block">Supplier</Label>
+                                                <Select
+                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(supplierId) => {
+                                                        const supplier = suppliers.find(s => s.id == supplierId);
+                                                        if (supplier) {
+                                                            updateItem(index, 'supplier_name', supplier.name);
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full h-12">
+                                                        <SelectValue placeholder="Select a supplier" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {suppliers.map((supplier) => (
+                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                                                {supplier.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors[`items.${index}.supplier_name`] && (
+                                                    <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
+                                                )}
+                                            </div>
                                              
                                              <div className="col-span-2">
                                                  <div className="text-center">
@@ -410,18 +497,53 @@ function AddTripModal({ isOpen, onClose, errors = {} }) {
 
                                     {/* Tablet Layout - Compact with shared rows (LG screens) */}
                                     <div className="hidden lg:block xl:hidden lg:p-3 lg:space-y-3">
-                                        <div className="grid grid-cols-2 gap-3 items-end">
+                                        <div className="grid grid-cols-3 gap-3 items-end">
                                             <div>
-                                                <Label className="text-sm font-medium mb-2 block">Product Name</Label>
-                                                <Input
-                                                    placeholder="Enter product name"
-                                                    value={item.product_name}
-                                                    onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                                                    required
-                                                    className="w-full h-10"
-                                                />
+                                                <Label className="text-sm font-medium mb-2 block">Product *</Label>
+                                                <Select
+                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
+                                                >
+                                                    <SelectTrigger className="w-full h-10">
+                                                        <SelectValue placeholder="Select a product" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map((product) => (
+                                                            <SelectItem key={product.id} value={product.id.toString()}>
+                                                                {product.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <Label className="text-sm font-medium mb-2 block">Supplier</Label>
+                                                <Select
+                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
+                                                    onValueChange={(supplierId) => {
+                                                        const supplier = suppliers.find(s => s.id == supplierId);
+                                                        if (supplier) {
+                                                            updateItem(index, 'supplier_name', supplier.name);
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full h-10">
+                                                        <SelectValue placeholder="Select a supplier" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {suppliers.map((supplier) => (
+                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                                                {supplier.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors[`items.${index}.supplier_name`] && (
+                                                    <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
                                                 )}
                                             </div>
                                             

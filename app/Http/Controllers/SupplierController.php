@@ -26,8 +26,15 @@ class SupplierController extends Controller
                 return $this->creditService->getSupplierSummary($supplier);
             });
 
+        // Get products for dropdown
+        $products = \App\Models\Product::select('id', 'name', 'unit_cost_price', 'unit_selling_price')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('suppliers', [
             'suppliers' => $suppliers,
+            'products' => $products,
         ]);
     }
 
@@ -258,11 +265,18 @@ class SupplierController extends Controller
                 return $this->creditService->getTransactionSummary($transaction);
             });
 
+        // Get products for dropdown
+        $products = \App\Models\Product::select('id', 'name', 'unit_cost_price', 'unit_selling_price')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('SupplierTransactions', [
             'supplier' => $supplier,
             'transactions' => $transactions,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'products' => $products,
         ]);
     }
 }
