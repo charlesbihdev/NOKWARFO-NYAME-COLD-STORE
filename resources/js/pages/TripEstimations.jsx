@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Calendar, MapPin, TrendingUp, DollarSign, Eye } from 'lucide-react';
 
@@ -47,7 +47,7 @@ export default function TripEstimations({
     const [startDate, setStartDate] = useState(start_date || currentMonthStart);
     const [endDate, setEndDate] = useState(end_date || currentMonthEnd);
 
-    // Handle date changes
+    // Handle date changes - reset page params to 1 on new date filter
     const handleDateChange = (value, type) => {
         const newStartDate = type === 'start' ? value : startDate;
         const newEndDate = type === 'end' ? value : endDate;
@@ -60,7 +60,7 @@ export default function TripEstimations({
             {
                 start_date: newStartDate,
                 end_date: newEndDate,
-                page: 1,
+                page: 1, // Reset to first page when changing filters
             },
             { preserveState: true, preserveScroll: true, replace: true },
         );
@@ -285,37 +285,31 @@ export default function TripEstimations({
                         </Table>
 
                         {/* Pagination */}
-                        {trips.data?.length > 0 && (
-                            <div className="flex items-center justify-between mt-4">
-                                <div className="text-sm text-gray-600">
-                                    Showing {trips.data.length} trips
-                                </div>
-                                <div className="flex gap-2">
-                                    {trips.prev_page_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => router.get(trips.prev_page_url, {}, { 
-                                                preserveState: true, 
-                                                preserveScroll: true 
-                                            })}
-                                        >
-                                            Previous
-                                        </Button>
-                                    )}
-                                    {trips.next_page_url && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => router.get(trips.next_page_url, {}, { 
-                                                preserveState: true, 
-                                                preserveScroll: true 
-                                            })}
-                                        >
-                                            Next
-                                        </Button>
-                                    )}
-                                </div>
+                        {trips.data?.length === 0 ? (
+                            <div className="text-muted-foreground py-8 text-center">No trip estimations found for the selected period.</div>
+                        ) : (
+                            <div className="my-3 flex items-center justify-center gap-4">
+                                {trips.prev_page_url && (
+                                    <Link
+                                        preserveScroll
+                                        preserveState
+                                        href={trips.prev_page_url}
+                                        className="rounded border px-4 py-2 hover:bg-gray-100"
+                                    >
+                                        « Previous
+                                    </Link>
+                                )}
+                                <span className="px-4 py-2 font-medium">Page {trips.current_page}</span>
+                                {trips.next_page_url && (
+                                    <Link
+                                        preserveScroll
+                                        preserveState
+                                        href={trips.next_page_url}
+                                        className="rounded border px-4 py-2 hover:bg-gray-100"
+                                    >
+                                        Next »
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </CardContent>
