@@ -19,9 +19,10 @@ const SalesTable = ({ sales_transactions }) => {
     // States for filters
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Default to today
+    // Default to last 3 days (including today)
     const todayStr = new Date().toISOString().slice(0, 10);
-    const [startDate, setStartDate] = useState(todayStr);
+    const threeDaysAgoStr = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const [startDate, setStartDate] = useState(threeDaysAgoStr);
     const [endDate, setEndDate] = useState(todayStr);
 
     // Pagination state from props

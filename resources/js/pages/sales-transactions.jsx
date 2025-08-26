@@ -56,20 +56,28 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
     }, [paymentType, runningTotal]);
 
     const handleOpen = () => {
-        form.reset();
         setItems([{ product_id: '', qty: '', unit_selling_price: '', total: '' }]);
         setAmountPaid('');
         setDueDate('');
         setPaymentType('cash');
+        form.reset();
+        form.setData({
+            customer_id: '',
+            customer_name: '',
+            items: [{ product_id: '', qty: '', unit_selling_price: '', total: '' }],
+            amount_paid: '',
+            due_date: '',
+            payment_type: 'cash',
+        });
         setOpen(true);
     };
     const handleClose = () => {
         setOpen(false);
-        form.reset();
         setItems([{ product_id: '', qty: '', unit_selling_price: '', total: '' }]);
         setAmountPaid('');
         setDueDate('');
         setPaymentType('cash');
+        form.reset();
     };
 
     const breadcrumbs = [{ title: 'Sales Transactions', href: '/sales-transactions' }];

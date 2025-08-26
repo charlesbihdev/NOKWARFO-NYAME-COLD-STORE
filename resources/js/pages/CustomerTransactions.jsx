@@ -324,28 +324,47 @@ export default function CustomerTransactions({ customer, transactions }) {
                                 </Table>
                             </div>
 
-                                                         {/* Pagination */}
-                             {transactions.last_page > 1 && (
-                                 <div className="mt-6">
-                                     <nav className="flex justify-center space-x-2">
-                                         <button
-                                             disabled={!transactions.prev_page_url}
-                                             onClick={() => window.location.href = transactions.prev_page_url}
-                                             className={`rounded border px-3 py-1 ${!transactions.prev_page_url ? 'cursor-not-allowed bg-gray-200' : 'bg-white hover:bg-gray-100'}`}
-                                         >
-                                             Previous
-                                         </button>
-                                         <span className="rounded border px-3 py-1">{transactions.current_page}</span>
-                                         <button
-                                             disabled={!transactions.next_page_url}
-                                             onClick={() => window.location.href = transactions.next_page_url}
-                                             className={`rounded border px-3 py-1 ${!transactions.next_page_url ? 'cursor-not-allowed bg-gray-200' : 'bg-white hover:bg-gray-100'}`}
-                                         >
-                                             Next
-                                         </button>
-                                     </nav>
-                                 </div>
-                             )}
+                            {/* Simple Pagination */}
+                            {(transactions.prev_page_url || transactions.next_page_url) && (
+                                <div className="mt-6 flex items-center justify-center gap-4">
+                                    {/* Previous Page */}
+                                    {transactions.prev_page_url ? (
+                                        <Link
+                                            href={transactions.prev_page_url}
+                                            preserveState
+                                            preserveScroll
+                                            className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
+                                        >
+                                            Previous
+                                        </Link>
+                                    ) : (
+                                        <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
+                                            Previous
+                                        </span>
+                                    )}
+                                    
+                                    {/* Page Info */}
+                                    <span className="rounded border px-3 py-1">
+                                        {transactions.current_page}
+                                    </span>
+
+                                    {/* Next Page */}
+                                    {transactions.next_page_url ? (
+                                        <Link
+                                            href={transactions.next_page_url}
+                                            preserveState
+                                            preserveScroll
+                                            className="rounded border px-3 py-1 bg-white hover:bg-gray-100"
+                                        >
+                                            Next
+                                        </Link>
+                                    ) : (
+                                        <span className="rounded border px-3 py-1 cursor-not-allowed bg-gray-200">
+                                            Next
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

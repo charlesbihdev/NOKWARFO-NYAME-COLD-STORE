@@ -19,8 +19,8 @@ class SalesTransactionController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $startDate = $request->input('start_date') ?? now()->toDateString();
-        $endDate = $request->input('end_date') ?? now()->toDateString();
+        $startDate = $request->input('start_date') ?? now()->subDays(2)->toDateString(); // 3 days ago (today - 2)
+        $endDate = $request->input('end_date') ?? now()->toDateString(); // today
 
         $query = Sale::with(['customer', 'saleItems.product'])
             ->whereDate('created_at', '>=', $startDate)

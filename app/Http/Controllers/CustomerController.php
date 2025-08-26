@@ -87,16 +87,13 @@ class CustomerController extends Controller
         ]);
     }
 
-    // Enhanced Customer Transaction History
     public function transactions(Customer $customer)
     {
-        // Get all sales (credit and partial) and credit collections
-        $transactions = collect();
-
-        // Add credit sales as debt transactions
+        // Get credit sales (debt transactions) with proper relationships
         $creditSales = $customer->sales()
             ->whereIn('payment_type', ['credit', 'partial'])
             ->with('saleItems')
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($sale) {
                 $debtAmount = $sale->payment_type === 'credit' 
@@ -111,8 +108,7 @@ class CustomerController extends Controller
                     'description' => 'Sale: ' . $sale->saleItems->pluck('product_name')->join(', '),
                     'debt_amount' => $debtAmount,
                     'payment_amount' => 0,
-                    'previous_balance' => 0, // Will be calculated
-                    'current_balance' => 0, // Will be calculated
+                    'current_balance' => 0, // Will be calculated in running balance
                     'notes' => $sale->notes,
                     'sale_items' => $sale->saleItems->map(function ($item) {
                         return [
@@ -122,11 +118,13 @@ class CustomerController extends Controller
                             'total' => $item->total,
                         ];
                     }),
+                    'created_at' => $sale->created_at,
                 ];
             });
 
-        // Add credit collections as payment transactions
+        // Get payment transactions
         $payments = $customer->creditCollections()
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($collection) {
                 return [
@@ -137,45 +135,49 @@ class CustomerController extends Controller
                     'description' => 'Payment received',
                     'debt_amount' => 0,
                     'payment_amount' => $collection->amount_collected,
-                    'previous_balance' => 0, // Will be calculated
-                    'current_balance' => 0, // Will be calculated
+                    'current_balance' => 0, // Will be calculated in running balance
                     'notes' => $collection->notes,
+                    'created_at' => $collection->created_at,
                 ];
             });
 
-        // Combine and sort by date
+        // Combine and sort by created_at desc (newest first)
         $allTransactions = $creditSales->concat($payments)
-            ->sortBy('date')
+            ->sortByDesc('created_at')
             ->values();
 
-        // Calculate running balances
+        // Calculate running balances properly
         $runningBalance = 0;
-        $transactionsWithBalance = $allTransactions->map(function ($transaction) use (&$runningBalance) {
+        $transactionsWithBalance = $allTransactions->reverse()->map(function ($transaction) use (&$runningBalance) {
             $transaction['previous_balance'] = $runningBalance;
             
             if ($transaction['type'] === 'debt') {
+                // Debt increases the balance owed
                 $runningBalance += $transaction['debt_amount'];
             } else {
+                // Payment reduces the balance owed
                 $runningBalance -= $transaction['payment_amount'];
             }
             
             $transaction['current_balance'] = $runningBalance;
             return $transaction;
-        });
+        })->reverse()->values();
 
-        // Paginate the results
-        $perPage = 15;
+        // Manual pagination
+        $perPage = 30;
         $page = request()->get('page', 1);
         $offset = ($page - 1) * $perPage;
-        $paginatedTransactions = $transactionsWithBalance->slice($offset, $perPage);
+        $paginatedTransactions = $transactionsWithBalance->slice($offset, $perPage)->values();
 
-        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+        // Create simple paginator
+        $hasMore = $transactionsWithBalance->count() > ($offset + $perPage);
+        $paginator = new \Illuminate\Pagination\Paginator(
             $paginatedTransactions,
-            $transactionsWithBalance->count(),
             $perPage,
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
         );
+        $paginator->hasMorePagesWhen($hasMore);
 
         return Inertia::render('CustomerTransactions', [
             'customer' => [
