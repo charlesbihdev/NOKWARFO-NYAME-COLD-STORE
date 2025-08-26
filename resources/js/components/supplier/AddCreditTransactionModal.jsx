@@ -99,8 +99,7 @@ function AddCreditTransactionModal({ isOpen, onClose, supplier, products = [], e
             const updatedItems = [...items];
             updatedItems[index] = {
                 ...updatedItems[index],
-                product_name: product.name,
-                unit_price: product.unit_cost_price || 0
+                product_name: product.name
             };
             setItems(updatedItems);
             setData('items', updatedItems);

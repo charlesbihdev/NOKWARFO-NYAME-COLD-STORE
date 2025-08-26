@@ -102,9 +102,7 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
             const updatedItems = [...editItems];
             updatedItems[index] = {
                 ...updatedItems[index],
-                product_name: product.name,
-                unit_cost_price: product.unit_cost_price || 0,
-                unit_selling_price: product.unit_selling_price || 0
+                product_name: product.name
             };
             setEditItems(updatedItems);
             setData('items', updatedItems);

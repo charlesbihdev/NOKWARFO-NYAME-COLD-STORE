@@ -96,9 +96,7 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
             const updatedItems = [...items];
             updatedItems[index] = {
                 ...updatedItems[index],
-                product_name: product.name,
-                unit_cost_price: product.unit_cost_price || 0,
-                unit_selling_price: product.unit_selling_price || 0
+                product_name: product.name
             };
             setItems(updatedItems);
             setData('items', updatedItems);
