@@ -39,7 +39,7 @@ class TripEstimationController extends Controller
             ->whereDate('trip_date', '<=', $endDate)
             ->orderByDesc('trip_date')
             ->orderByDesc('created_at')
-            ->simplePaginate(15)
+            ->simplePaginate(20)
             ->through(function ($trip) {
                 return [
                     'id' => $trip->id,
