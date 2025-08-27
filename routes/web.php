@@ -31,7 +31,6 @@ Route::middleware('auth')->group(function () {
     Route::resource('dashboard', DashboardController::class);
     Route::resource('products', ProductController::class);
     Route::resource('stock-control', StockControlController::class);
-    Route::put('/stock-control/{id}', [StockControlController::class, 'update'])->name('stock-control.update');
     Route::resource('daily-sales-report', DailySalesReportController::class);
     Route::resource('credit-collection', CreditCollectionController::class);
     Route::resource('profit-analysis', ProfitAnalysisController::class);
