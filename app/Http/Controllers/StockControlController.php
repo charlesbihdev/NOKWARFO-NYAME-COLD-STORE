@@ -19,15 +19,7 @@ class StockControlController extends Controller
 
         $today = now()->toDateString();
 
-        // Default to today if no dates provided
-        if (!$startDate && !$endDate) {
-            $startDate = $today;
-            $endDate = $today;
-        } elseif ($startDate && !$endDate) {
-            $endDate = $startDate;
-        } elseif (!$startDate && $endDate) {
-            $startDate = $endDate;
-        }
+       
 
         // Ensure startDate <= endDate
         if ($startDate > $endDate) {
