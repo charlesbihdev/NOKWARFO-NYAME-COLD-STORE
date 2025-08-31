@@ -13,22 +13,33 @@ class StockHelper
     // Convert total lines to C/L display
     public static function formatCartonLine($total_lines, $lines_per_carton)
     {
+        // Handle negative quantities (for sold movements)
+        $isNegative = $total_lines < 0;
+        $absoluteLines = abs($total_lines);
+        
         if ($lines_per_carton <= 1) {
-            return (string) $total_lines; // No carton format needed
+            return ($isNegative ? '-' : '') . (string) $absoluteLines; // No carton format needed
         }
 
-        $cartons = intdiv($total_lines, $lines_per_carton);
-        $lines = $total_lines % $lines_per_carton;
+        $cartons = intdiv($absoluteLines, $lines_per_carton);
+        $lines = $absoluteLines % $lines_per_carton;
+
+        $result = '';
+        if ($isNegative) {
+            $result = '-';
+        }
 
         if ($cartons > 0 && $lines > 0) {
-            return "{$cartons}C{$lines}L";
+            $result .= "{$cartons}C{$lines}L";
         } elseif ($cartons > 0) {
-            return "{$cartons}C";
+            $result .= "{$cartons}C";
         } elseif ($lines > 0) {
-            return "{$lines}L";
+            $result .= "{$lines}L";
+        } else {
+            $result .= "0";
         }
 
-        return "0";
+        return $result;
     }
 
     // Parse carton/line format string and convert to total lines

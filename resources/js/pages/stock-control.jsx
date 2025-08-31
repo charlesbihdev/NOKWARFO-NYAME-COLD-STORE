@@ -4,25 +4,27 @@ import { useState } from 'react';
 import DateRangePicker from '../components/DateRangePicker';
 
 import AddStockModal from '../components/stock/AddStockModal';
+import StockAdjustmentModal from '../components/stock/StockAdjustmentModal';
 import EditStockMovementModal from '../components/stock/EditStockMovementModal';
+import EditAdjustmentModal from '../components/stock/EditAdjustmentModal';
 import InventoryTable from '../components/stock/InventoryTable';
 import StockActivitySummary from '../components/stock/StockActivitySummary';
 import StockMovementsTable from '../components/stock/StockMovementsTable';
 
-export default function StockControl({ stock_movements = [], products = [], suppliers = [], stock_activity_summary = [], date }) {
+
+export default function StockControl({ stock_movements = [], products = [], stock_activity_summary = [], date }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isEditAdjustmentModalOpen, setIsEditAdjustmentModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [editingStockMovement, setEditingStockMovement] = useState(null);
     const { data, setData, post, processing, errors, reset } = useForm({
         product_id: '',
-        supplier_id: '',
-        type: 'received',
         quantity: '',
-        unit_cost: '',
-        total_cost: '',
         notes: '',
     });
+
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const breadcrumbs = [{ title: 'Stock Control', href: '/stock-control' }];
@@ -31,14 +33,15 @@ export default function StockControl({ stock_movements = [], products = [], supp
         setSelectedProduct(product);
         setData({
             product_id: product.id,
-            supplier_id: product.supplier_id ? product.supplier_id.toString() : '',
-            type: 'received',
             quantity: '',
-            unit_cost: product.cost_price || '',
-            total_cost: '',
             notes: '',
         });
         setIsAddModalOpen(true);
+    }
+
+    function openAdjustStock(product) {
+        setSelectedProduct(product);
+        setIsAdjustModalOpen(true);
     }
 
     function handleAddStock(e) {
@@ -55,18 +58,29 @@ export default function StockControl({ stock_movements = [], products = [], supp
         });
     }
 
+
+
     function handleDeleteStockMovement(id) {
         if (confirm('Are you sure you want to delete this stock movement?')) {
             router.delete(route('stock-control.destroy', id), {
                 preserveScroll: true,
-                preserveState: false,
+                preserveState: true,
+                only: ['stock_movements', 'products', 'stock_activity_summary', 'flash'],
             });
         }
     }
 
     function handleEditStockMovement(stockMovement) {
         setEditingStockMovement(stockMovement);
-        setIsEditModalOpen(true);
+        
+        // Determine which modal to show based on movement type
+        if (stockMovement.type === 'received') {
+            setIsEditModalOpen(true);
+            setIsEditAdjustmentModalOpen(false);
+        } else if (['adjustment_in', 'adjustment_out'].includes(stockMovement.type)) {
+            setIsEditAdjustmentModalOpen(true);
+            setIsEditModalOpen(false);
+        }
     }
 
     const handleDateRangeChange = (value, type) => {
@@ -99,7 +113,7 @@ export default function StockControl({ stock_movements = [], products = [], supp
                 </div>
 
                 {/* Pass backend stock directly */}
-                <InventoryTable products={products} onAddStock={openAddStock} />
+                <InventoryTable products={products} onAddStock={openAddStock} onAdjustStock={openAdjustStock} />
 
                 <AddStockModal
                     isOpen={isAddModalOpen}
@@ -107,10 +121,15 @@ export default function StockControl({ stock_movements = [], products = [], supp
                     selectedProduct={selectedProduct}
                     data={data}
                     setData={setData}
-                    suppliers={suppliers}
                     errors={errors}
                     processing={processing}
                     onSubmit={handleAddStock}
+                />
+
+                <StockAdjustmentModal
+                    isOpen={isAdjustModalOpen}
+                    onClose={() => setIsAdjustModalOpen(false)}
+                    selectedProduct={selectedProduct}
                 />
 
                 <EditStockMovementModal
@@ -121,7 +140,17 @@ export default function StockControl({ stock_movements = [], products = [], supp
                     }}
                     stockMovement={editingStockMovement}
                     products={products}
-                    suppliers={suppliers}
+                    errors={errors}
+                />
+
+                <EditAdjustmentModal
+                    isOpen={isEditAdjustmentModalOpen}
+                    onClose={() => {
+                        setIsEditAdjustmentModalOpen(false);
+                        setEditingStockMovement(null);
+                    }}
+                    stockMovement={editingStockMovement}
+                    products={products}
                     errors={errors}
                 />
 

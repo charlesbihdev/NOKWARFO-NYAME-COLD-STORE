@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 
-function EditStockMovementModal({ isOpen, onClose, stockMovement, products, errors = {} }) {
+function EditAdjustmentModal({ isOpen, onClose, stockMovement, products, errors = {} }) {
     const { data, setData, put, processing, reset } = useForm({
         product_id: '',
+        type: '',
         quantity: '',
         notes: '',
     });
@@ -34,14 +35,9 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
                 return '0';
             };
 
-            // Convert unit cost from per-line to per-carton for display
-            const pricePerCarton = (pricePerLine, linesPerCarton) => {
-                if (linesPerCarton <= 0) return 0;
-                return pricePerLine * linesPerCarton;
-            };
-
             setData({
                 product_id: stockMovement.product_id || '',
+                type: stockMovement.type || '',
                 quantity: formatCartonLine(stockMovement.quantity, stockMovement.product?.lines_per_carton || 1),
                 notes: stockMovement.notes || '',
             });
@@ -51,7 +47,7 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
     function handleSubmit() {
         if (!stockMovement) return;
 
-        put(route('stock-control.update', stockMovement.id), {
+        put(route('stock-control.updateAdjustment', stockMovement.id), {
             onSuccess: () => {
                 reset();
                 onClose();
@@ -62,14 +58,19 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
         });
     }
 
-    if (!stockMovement || stockMovement.type !== 'received') return null;
+    if (!stockMovement || !['adjustment_in', 'adjustment_out'].includes(stockMovement.type)) return null;
+
+    const isAdjustmentIn = stockMovement.type === 'adjustment_in';
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Edit Stock Movement</DialogTitle>
-                    <DialogDescription>Update the stock movement information. All fields marked with * are required.</DialogDescription>
+                    <DialogTitle>Edit Stock Adjustment</DialogTitle>
+                    <DialogDescription>
+                        Update the {isAdjustmentIn ? 'stock addition' : 'stock reduction'} information. 
+                        All fields marked with * are required.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
@@ -93,37 +94,33 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
                             {errors.product_id && <InputError message={errors.product_id} className="mt-1" />}
                         </div>
 
-
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="edit-type">Type</Label>
-                            <div className="w-full rounded border px-3 py-2 bg-gray-50 text-gray-700">
-                                Stock In (Received)
+                            <Label htmlFor="edit-type">Adjustment Type</Label>
+                            <div className={`w-full rounded border px-3 py-2 font-medium ${
+                                isAdjustmentIn ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                            }`}>
+                                {isAdjustmentIn ? '➕ Stock Addition' : '➖ Stock Reduction'}
                             </div>
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-quantity">Quantity * (Format: 5C2L for 5 cartons + 2 lines)</Label>
-                            <Input
-                                id="edit-quantity"
-                                placeholder="e.g., 5C2L, 10C, 15L, or 20"
-                                value={data.quantity}
-                                onChange={(e) => setData('quantity', e.target.value)}
-                                required
-                            />
-                            {errors.quantity && <InputError message={errors.quantity} className="mt-1" />}
-                        </div>
                     </div>
 
-
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-quantity">Quantity * (Format: 5C2L for 5 cartons + 2 lines)</Label>
+                        <Input
+                            id="edit-quantity"
+                            placeholder="e.g., 5C2L, 10C, 15L, or 20"
+                            value={data.quantity}
+                            onChange={(e) => setData('quantity', e.target.value)}
+                            required
+                        />
+                        {errors.quantity && <InputError message={errors.quantity} className="mt-1" />}
+                    </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-notes">Notes</Label>
                         <Textarea
                             id="edit-notes"
-                            placeholder="Additional notes about this stock movement"
+                            placeholder="Reason for this stock adjustment"
                             value={data.notes}
                             onChange={(e) => setData('notes', e.target.value)}
                             rows={3}
@@ -136,7 +133,7 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
                             Cancel
                         </Button>
                         <Button onClick={handleSubmit} disabled={processing}>
-                            {processing ? 'Updating...' : 'Update Stock Movement'}
+                            {processing ? 'Updating...' : 'Update Adjustment'}
                         </Button>
                     </div>
                 </div>
@@ -145,4 +142,4 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, erro
     );
 }
 
-export default EditStockMovementModal;
+export default EditAdjustmentModal;

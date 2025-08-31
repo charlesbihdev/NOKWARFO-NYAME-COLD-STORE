@@ -19,7 +19,6 @@ return new class extends Migration
             $table->date('transaction_date');
             $table->text('description')->nullable();
             $table->decimal('amount_owed', 12, 2); // Total amount owed for this transaction
-            $table->boolean('is_fully_paid')->default(false); // Track if transaction is fully paid
             $table->text('notes')->nullable();
             $table->timestamps();
 
@@ -40,7 +39,6 @@ return new class extends Migration
         // Create supplier_payments table
         Schema::create('supplier_payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_credit_transaction_id')->constrained('supplier_credit_transactions', 'id', 'fk_supplier_payments_transaction')->onDelete('cascade');
             $table->foreignId('supplier_id')->constrained('suppliers', 'id', 'fk_supplier_payments_supplier')->onDelete('cascade');
             $table->date('payment_date');
             $table->decimal('payment_amount', 12, 2);
@@ -49,7 +47,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['supplier_id', 'payment_date']);
-            $table->index('supplier_credit_transaction_id');
         });
     }
 

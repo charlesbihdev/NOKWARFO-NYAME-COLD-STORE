@@ -13,7 +13,6 @@ class SupplierPayment extends Model
     protected $table = 'supplier_payments';
 
     protected $fillable = [
-        'supplier_credit_transaction_id',
         'supplier_id',
         'payment_date',
         'payment_amount',

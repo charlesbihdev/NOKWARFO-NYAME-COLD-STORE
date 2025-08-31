@@ -18,25 +18,38 @@ export default function StockMovementsTable({ stock_movements, onDelete, onEdit 
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Product</TableHead>
-                                <TableHead>Supplier</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Quantity</TableHead>
-                                <TableHead>Unit Cost</TableHead>
-                                <TableHead>Total Cost</TableHead>
                                 <TableHead>Notes</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {stock_movements.map((movement) => (
-                                <TableRow key={movement.id}>
-                                    <TableCell>{movement.product?.name}</TableCell>
-                                    <TableCell>{movement.supplier?.name}</TableCell>
-                                    <TableCell>{movement.type}</TableCell>
-                                    <TableCell>{movement.quantity_display}</TableCell>
-                                    <TableCell>GH₵{parseFloat(movement.price_per_carton).toFixed(2)}</TableCell>
-                                    <TableCell>GH₵{parseFloat(movement.total_cost).toFixed(2)}</TableCell>
-                                    <TableCell>{movement.notes}</TableCell>
+                                <TableRow key={movement.id} className={movement.type.includes('adjustment') ? 'bg-yellow-50' : 'bg-green-50'}>
+                                    <TableCell className="font-medium">{movement.product?.name}</TableCell>
+                                    <TableCell>
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                            movement.type === 'received'
+                                                ? 'bg-green-100 text-green-800'
+                                                : movement.type === 'adjustment_in'
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                            {movement.type === 'received' ? 'Stock In' : 
+                                             movement.type === 'adjustment_in' ? 'Adjustment In' : 'Adjustment Out'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className={`font-medium ${
+                                        movement.type === 'adjustment_out' ? 'text-yellow-600' : 'text-green-600'
+                                    }`}>
+                                        {movement.quantity_display}
+                                    </TableCell>
+                                    <TableCell>
+                                        {movement.notes}
+                                    </TableCell>
+                                    <TableCell>{new Date(movement.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell>
                                         <div className="flex space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => onEdit(movement)}>
