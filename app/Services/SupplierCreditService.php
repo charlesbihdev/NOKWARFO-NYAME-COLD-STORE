@@ -187,14 +187,20 @@ class SupplierCreditService
     /**
      * Get supplier summary with calculated totals
      */
-    public function getSupplierSummary(Supplier $supplier): array
+    public function getSupplierSummary(Supplier $supplier, ?string $startDate = null, ?string $endDate = null): array
     {
-        $transactions = $supplier->creditTransactions()
-            ->orderByDesc('transaction_date')
-            ->get();
+        $transactionsQuery = $supplier->creditTransactions();
+        $paymentsQuery = $supplier->payments();
 
-        $totalOwed = $transactions->sum('amount_owed');
-        $totalPayments = $supplier->payments()->sum('payment_amount');
+        // Apply date filters if provided
+        if ($startDate && $endDate) {
+            $transactionsQuery->whereBetween('transaction_date', [$startDate, $endDate]);
+            $paymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
+        }
+
+        $transactions = $transactionsQuery->orderByDesc('transaction_date')->get();
+        $totalOwed = $transactionsQuery->sum('amount_owed');
+        $totalPayments = $paymentsQuery->sum('payment_amount');
         $totalOutstanding = max(0, $totalOwed - $totalPayments);
 
         return [
