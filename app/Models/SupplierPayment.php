@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SupplierPayment extends Model
 {
@@ -14,6 +14,7 @@ class SupplierPayment extends Model
 
     protected $fillable = [
         'supplier_id',
+        'transaction_id',
         'payment_date',
         'payment_amount',
         'payment_method',
@@ -31,21 +32,15 @@ class SupplierPayment extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    // Helper methods
-    public function getFormattedPaymentAmountAttribute(): string
+    public function transaction(): BelongsTo
     {
-        return 'GHC ' . number_format($this->payment_amount, 2);
-    }
-
-    public function getFormattedPaymentDateAttribute(): string
-    {
-        return $this->payment_date->format('d M Y');
+        return $this->belongsTo(SupplierCreditTransaction::class, 'transaction_id');
     }
 
     // Helper methods
     public function getFormattedPaymentAmountAttribute(): string
     {
-        return 'GHC ' . number_format($this->payment_amount, 2);
+        return 'GHC '.number_format($this->payment_amount, 2);
     }
 
     public function getFormattedPaymentDateAttribute(): string

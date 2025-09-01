@@ -49,14 +49,14 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
             },
             onError: (errors) => {
                 // The errors will be automatically handled by the form
-                console.error('Failed to submit expense:', errors);
+    
             },
             preserveScroll: true,
         });
     }
 
     function handleCollect(debt) {
-        console.log(debt);
+
         setData({
             customer_id: debt.customer_id,
             amount_collected: '',

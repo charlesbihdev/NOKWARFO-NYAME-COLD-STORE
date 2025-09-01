@@ -78,7 +78,7 @@ function Dashboard({
         },
     ];
 
-    console.log(stats);
+    
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

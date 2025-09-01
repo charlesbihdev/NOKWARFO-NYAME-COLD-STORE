@@ -40,6 +40,7 @@ return new class extends Migration
         Schema::create('supplier_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('supplier_id')->constrained('suppliers', 'id', 'fk_supplier_payments_supplier')->onDelete('cascade');
+            $table->foreignId('transaction_id')->nullable()->constrained('supplier_credit_transactions')->onDelete('set null');
             $table->date('payment_date');
             $table->decimal('payment_amount', 12, 2);
             $table->string('payment_method')->nullable();

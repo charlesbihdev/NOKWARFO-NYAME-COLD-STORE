@@ -37,9 +37,13 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+            'busy_timeout' => 60000, // 60 seconds
+            'journal_mode' => 'WAL', // Write-Ahead Logging for better performance
+            'synchronous' => 'NORMAL', // Better performance than FULL
+            'options' => [
+                PDO::ATTR_TIMEOUT => 60, // 60 seconds timeout
+                PDO::ATTR_PERSISTENT => false, // Disable persistent connections
+            ],
         ],
 
         'mysql' => [

@@ -2,13 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\Product;
-use App\Models\StockMovement;
-use App\Models\SupplierCreditTransaction;
-use App\Models\SupplierPayment;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Supplier extends Model
 {
@@ -50,12 +46,17 @@ class Supplier extends Model
     }
 
     // Computed Properties (Calculated from related tables)
+    public function getTotalOwedAttribute(): float
+    {
+        return $this->creditTransactions()->sum('amount_owed');
+    }
+
     public function getTotalOutstandingAttribute(): float
     {
-        return $this->creditTransactions()
-            ->withOutstandingBalance()
-            ->get()
-            ->sum('remaining_balance');
+        $totalTransactions = $this->creditTransactions()->sum('amount_owed');
+        $totalPayments = $this->payments()->sum('payment_amount');
+
+        return max(0, $totalTransactions - $totalPayments);
     }
 
     public function getTotalCreditTransactionsAttribute(): int
@@ -63,11 +64,15 @@ class Supplier extends Model
         return $this->creditTransactions()->count();
     }
 
+    public function getTotalPaymentsMadeAttribute(): float
+    {
+        return $this->payments()->sum('payment_amount');
+    }
+
     public function getPendingTransactionsAttribute(): int
     {
-        return $this->creditTransactions()
-            ->withOutstandingBalance()
-            ->count();
+        // All transactions are considered pending since payments reduce overall debt
+        return $this->creditTransactions()->count();
     }
 
     public function getLastTransactionDateAttribute(): ?string
@@ -75,7 +80,7 @@ class Supplier extends Model
         $lastTransaction = $this->creditTransactions()
             ->orderByDesc('transaction_date')
             ->first();
-        
+
         return $lastTransaction ? $lastTransaction->transaction_date : null;
     }
 
@@ -87,6 +92,6 @@ class Supplier extends Model
     // Helper methods
     public function getFormattedTotalOutstandingAttribute(): string
     {
-        return 'GHC ' . number_format($this->total_outstanding, 2);
+        return 'GHC '.number_format($this->total_outstanding, 2);
     }
 }
