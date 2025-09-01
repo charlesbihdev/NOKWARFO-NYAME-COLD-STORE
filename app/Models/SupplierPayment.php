@@ -26,29 +26,20 @@ class SupplierPayment extends Model
     ];
 
     // Relationships
-    public function creditTransaction(): BelongsTo
-    {
-        return $this->belongsTo(SupplierCreditTransaction::class, 'supplier_credit_transaction_id');
-    }
-
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    // Validation: Ensure payment doesn't exceed remaining balance
-    protected static function boot()
+    // Helper methods
+    public function getFormattedPaymentAmountAttribute(): string
     {
-        parent::boot();
+        return 'GHC ' . number_format($this->payment_amount, 2);
+    }
 
-        static::creating(function ($payment) {
-            $transaction = $payment->creditTransaction;
-            $remainingBalance = $transaction->remaining_balance;
-            
-            if ($payment->payment_amount > $remainingBalance) {
-                throw new \Exception("Payment amount (GHC {$payment->payment_amount}) cannot exceed remaining balance (GHC {$remainingBalance})");
-            }
-        });
+    public function getFormattedPaymentDateAttribute(): string
+    {
+        return $this->payment_date->format('d M Y');
     }
 
     // Helper methods
