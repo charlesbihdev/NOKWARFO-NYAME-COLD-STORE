@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SupplierCreditTransaction extends Model
 {
@@ -18,14 +18,12 @@ class SupplierCreditTransaction extends Model
         'transaction_date',
         'description',
         'amount_owed',
-        'is_fully_paid',
         'notes',
     ];
 
     protected $casts = [
         'transaction_date' => 'date',
         'amount_owed' => 'decimal:2',
-        'is_fully_paid' => 'boolean',
     ];
 
     // Relationships
@@ -34,81 +32,33 @@ class SupplierCreditTransaction extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(SupplierPayment::class, 'supplier_credit_transaction_id');
-    }
-
     public function items(): HasMany
     {
         return $this->hasMany(SupplierCreditTransactionItem::class, 'supplier_credit_transaction_id');
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SupplierPayment::class, 'transaction_id');
+    }
+
     // Computed Attributes (Not stored in database)
+    // Note: Payments are now handled at supplier level, not transaction level
     public function getAmountPaidAttribute(): float
     {
-        return $this->payments()->sum('payment_amount');
+        // This will be calculated at supplier level
+        return 0;
     }
 
     public function getRemainingBalanceAttribute(): float
     {
-        return $this->amount_owed - $this->amount_paid;
+        // This will be calculated at supplier level
+        return $this->amount_owed;
     }
 
     public function getStatusAttribute(): string
     {
-        $remaining = $this->remaining_balance;
-        
-        if ($remaining <= 0) {
-            return 'paid';
-        } elseif ($remaining < $this->amount_owed) {
-            return 'partial';
-        } else {
-            return 'pending';
-        }
-    }
-
-    public function getIsFullyPaidAttribute(): bool
-    {
-        return $this->remaining_balance <= 0;
-    }
-
-    public function getIsPartiallyPaidAttribute(): bool
-    {
-        return $this->status === 'partial';
-    }
-
-    public function getIsPendingAttribute(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    // Scopes
-    public function scopePending($query)
-    {
-        return $query->whereHas('payments', function ($q) {
-            $q->havingRaw('SUM(payment_amount) < supplier_credit_transactions.amount_owed');
-        })->orWhereDoesntHave('payments');
-    }
-
-    public function scopePartial($query)
-    {
-        return $query->whereHas('payments', function ($q) {
-            $q->havingRaw('SUM(payment_amount) > 0 AND SUM(payment_amount) < supplier_credit_transactions.amount_owed');
-        });
-    }
-
-    public function scopePaid($query)
-    {
-        return $query->whereHas('payments', function ($q) {
-            $q->havingRaw('SUM(payment_amount) >= supplier_credit_transactions.amount_owed');
-        });
-    }
-
-    public function scopeWithOutstandingBalance($query)
-    {
-        return $query->whereHas('payments', function ($q) {
-            $q->havingRaw('SUM(payment_amount) < supplier_credit_transactions.amount_owed');
-        })->orWhereDoesntHave('payments');
+        // Status is now determined at supplier level based on total outstanding
+        return 'pending';
     }
 }

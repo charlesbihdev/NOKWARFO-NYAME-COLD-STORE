@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
-import { Banknote, BarChart3, CreditCard, Home, Menu, Package, ShoppingCart, TrendingUp, Truck, Users, MapPin } from 'lucide-react';
+import { Banknote, BarChart3, CreditCard, Home, Menu, Package, ShoppingCart, TrendingUp, Truck, Users, MapPin, Receipt } from 'lucide-react';
 
 const menuItems = [
     { id: 'dashboard.index', label: 'Dashboard', icon: Home, section: 'main' },
@@ -15,6 +15,7 @@ const menuItems = [
     { id: 'sales-transactions.index', label: 'Sales Transactions', icon: ShoppingCart, section: 'sales' },
     { id: 'daily-sales-report.index', label: 'Daily Sales Report', icon: BarChart3, section: 'sales' },
     { id: 'credit-collection.index', label: 'Credit Collection', icon: CreditCard, section: 'financial' },
+    { id: 'expenses.index', label: 'Expenses', icon: Receipt, section: 'financial' },
     { id: 'profit-analysis.index', label: 'Profit Analysis', icon: TrendingUp, section: 'financial' },
     { id: 'bank-transfers.index', label: 'Bank Transfers', icon: Banknote, section: 'financial' },
 ];

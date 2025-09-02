@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('description');
             $table->decimal('amount', 10, 2);
+            $table->enum('type', ['fixed', 'additional', 'car_saving', 'trip_saving', 'loan_saving', 'others'])->default('others');
             $table->text('notes')->nullable();
             $table->date('date');
             $table->timestamps();

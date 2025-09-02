@@ -81,21 +81,12 @@ export default function EditStockModal({ isOpen, onClose, stockMovement, data, s
 
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="edit-type" className="text-right">
-                            Type *
+                            Type
                         </Label>
                         <div className="col-span-3">
-                            <select
-                                id="edit-type"
-                                value={data.type}
-                                onChange={(e) => setData('type', e.target.value)}
-                                required
-                                className="w-full rounded border px-2 py-1"
-                                disabled
-                            >
-                                <option value="received">Stock In</option>
-                                <option value="sold">Stock Out</option>
-                            </select>
-                            {errors.type && <div className="mt-1 text-xs text-red-500">{errors.type}</div>}
+                            <div className="w-full rounded border px-2 py-1 bg-gray-50 text-gray-700">
+                                Stock In (Received)
+                            </div>
                         </div>
                     </div>
 

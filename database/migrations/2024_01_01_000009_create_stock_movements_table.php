@@ -14,11 +14,8 @@ return new class extends Migration
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
-            $table->enum('type', ['received', 'sold']);
+            $table->enum('type', ['received', 'adjustment_in', 'adjustment_out']);
             $table->integer('quantity');
-            $table->decimal('unit_cost', 10, 2);
-            $table->decimal('total_cost', 10, 2);
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
 {
-    protected $fillable = ['description', 'amount', 'notes', 'date'];
+    protected $fillable = ['description', 'amount', 'type', 'notes', 'date'];
 
     protected $casts = [
         'amount' => 'decimal:2',

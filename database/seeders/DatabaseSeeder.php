@@ -61,7 +61,7 @@ class DatabaseSeeder extends Seeder
             'lines_per_carton' => 1,
             // 'default_selling_price' => 25.00,
             // 'default_cost_price' => 18.00,
-            'supplier_id' => $supplier1->id,
+            // 'supplier_id' => $supplier1->id,
             'is_active' => true,
         ]);
 

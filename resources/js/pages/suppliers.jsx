@@ -10,14 +10,16 @@ import { useState } from 'react';
 
 // Import our custom components
 import AddSupplierModal from '../components/supplier/AddSupplierModal';
-import AddCreditTransactionModal from '../components/supplier/AddCreditTransactionModal';
+import AddTransactionModal from '../components/supplier/AddTransactionModal';
 import EditSupplierModal from '../components/supplier/EditSupplierModal';
 import SupplierBalanceCard from '../components/supplier/SupplierBalanceCard';
+import PaymentModal from '../components/supplier/PaymentModal';
 
 function Suppliers({ suppliers = [], products = [], errors = {} }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isCreditTransactionModalOpen, setIsCreditTransactionModalOpen] = useState(false);
+    const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
 
@@ -38,14 +40,14 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
         }
     }
 
-    function handleAddCreditTransaction(supplier) {
+    function handleAddTransaction(supplier) {
         setSelectedSupplier(supplier);
-        setIsCreditTransactionModalOpen(true);
+        setIsAddTransactionModalOpen(true);
     }
 
-    function handleCloseCreditTransactionModal() {
-        setIsCreditTransactionModalOpen(false);
-        setSelectedSupplier(null);
+    function handleMakePayment(supplier) {
+        setSelectedSupplier(supplier);
+        setIsPaymentModalOpen(true);
     }
 
     function handleViewTransactions(supplier) {
@@ -77,6 +79,9 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
             return outstanding > 0;
         }).length,
     };
+
+    // Debug: Log supplier data to see properties
+    
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -232,11 +237,22 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleAddCreditTransaction(supplier)}
+                                                    onClick={() => handleAddTransaction(supplier)}
                                                     title="Add Transaction"
                                                     className="text-blue-600"
                                                 >
                                                     <Plus className="h-3 w-3" />
+                                                </Button>
+
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleMakePayment(supplier)}
+                                                    title={supplier.has_outstanding_debt ? `Make Payment (Outstanding: GHC ${supplier.total_outstanding})` : 'Make Payment'}
+                                                    className={supplier.has_outstanding_debt ? "text-green-600" : "text-gray-400"}
+                                                    disabled={!supplier.has_outstanding_debt}
+                                                >
+                                                    <DollarSign className="h-3 w-3" />
                                                 </Button>
 
                                                 <Button
@@ -274,14 +290,24 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
 
                 <EditSupplierModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} supplier={editingSupplier} errors={errors} />
 
-                <AddCreditTransactionModal
-                    isOpen={isCreditTransactionModalOpen}
+                <AddTransactionModal
+                    isOpen={isAddTransactionModalOpen}
                     onClose={() => {
-                        setIsCreditTransactionModalOpen(false);
+                        setIsAddTransactionModalOpen(false);
                         setSelectedSupplier(null);
                     }}
                     supplier={selectedSupplier}
                     products={products}
+                    errors={errors}
+                />
+
+                <PaymentModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => {
+                        setIsPaymentModalOpen(false);
+                        setSelectedSupplier(null);
+                    }}
+                    supplier={selectedSupplier}
                     errors={errors}
                 />
             </div>

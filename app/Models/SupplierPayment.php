@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SupplierPayment extends Model
 {
@@ -13,8 +13,8 @@ class SupplierPayment extends Model
     protected $table = 'supplier_payments';
 
     protected $fillable = [
-        'supplier_credit_transaction_id',
         'supplier_id',
+        'transaction_id',
         'payment_date',
         'payment_amount',
         'payment_method',
@@ -27,35 +27,20 @@ class SupplierPayment extends Model
     ];
 
     // Relationships
-    public function creditTransaction(): BelongsTo
-    {
-        return $this->belongsTo(SupplierCreditTransaction::class, 'supplier_credit_transaction_id');
-    }
-
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    // Validation: Ensure payment doesn't exceed remaining balance
-    protected static function boot()
+    public function transaction(): BelongsTo
     {
-        parent::boot();
-
-        static::creating(function ($payment) {
-            $transaction = $payment->creditTransaction;
-            $remainingBalance = $transaction->remaining_balance;
-            
-            if ($payment->payment_amount > $remainingBalance) {
-                throw new \Exception("Payment amount (GHC {$payment->payment_amount}) cannot exceed remaining balance (GHC {$remainingBalance})");
-            }
-        });
+        return $this->belongsTo(SupplierCreditTransaction::class, 'transaction_id');
     }
 
     // Helper methods
     public function getFormattedPaymentAmountAttribute(): string
     {
-        return 'GHC ' . number_format($this->payment_amount, 2);
+        return 'GHC '.number_format($this->payment_amount, 2);
     }
 
     public function getFormattedPaymentDateAttribute(): string

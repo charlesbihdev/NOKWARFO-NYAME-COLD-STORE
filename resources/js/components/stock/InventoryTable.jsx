@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function InventoryTable({ products, onAddStock }) {
+export default function InventoryTable({ products, onAddStock, onAdjustStock }) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Product Inventory</CardTitle>
+                <CardTitle>Product Inventoryyyy</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -13,8 +13,6 @@ export default function InventoryTable({ products, onAddStock }) {
                         <thead>
                             <tr>
                                 <th className="p-2 text-left font-medium">Product Name</th>
-                                <th className="p-2 text-center">Current Stock</th>
-                                <th className="p-2 text-left">Supplier</th>
                                 <th className="p-2 text-center">Actions</th>
                             </tr>
                         </thead>
@@ -22,12 +20,15 @@ export default function InventoryTable({ products, onAddStock }) {
                             {products.map((product) => (
                                 <tr key={product.id} className="border-t">
                                     <td className="p-2 font-medium">{product.name}</td>
-                                    <td className="p-2 text-center">{product.current_stock_display ?? '0'}</td>
-                                    <td className="p-2">{product.supplier?.name || 'N/A'}</td>
                                     <td className="p-2 text-center">
-                                        <Button variant="outline" size="sm" onClick={() => onAddStock(product)}>
-                                            Add Stock
-                                        </Button>
+                                        <div className="flex gap-2 justify-center">
+                                            <Button variant="outline" size="sm" onClick={() => onAddStock(product)}>
+                                                Add Stock
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => onAdjustStock(product)}>
+                                                Stock Adjustment
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

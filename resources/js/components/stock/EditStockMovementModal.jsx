@@ -7,14 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 
-function EditStockMovementModal({ isOpen, onClose, stockMovement, products, suppliers, errors = {} }) {
+function EditStockMovementModal({ isOpen, onClose, stockMovement, products, errors = {} }) {
     const { data, setData, put, processing, reset } = useForm({
         product_id: '',
-        supplier_id: '',
-        type: 'received',
         quantity: '',
-        unit_cost: '',
-        total_cost: '',
         notes: '',
     });
 
@@ -46,11 +42,7 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, supp
 
             setData({
                 product_id: stockMovement.product_id || '',
-                supplier_id: stockMovement.supplier_id ? stockMovement.supplier_id.toString() : '',
-                type: stockMovement.type || 'received',
                 quantity: formatCartonLine(stockMovement.quantity, stockMovement.product?.lines_per_carton || 1),
-                unit_cost: pricePerCarton(stockMovement.unit_cost, stockMovement.product?.lines_per_carton || 1),
-                total_cost: stockMovement.total_cost || '',
                 notes: stockMovement.notes || '',
             });
         }
@@ -70,7 +62,7 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, supp
         });
     }
 
-    if (!stockMovement) return null;
+    if (!stockMovement || stockMovement.type !== 'received') return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -101,39 +93,15 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, supp
                             {errors.product_id && <InputError message={errors.product_id} className="mt-1" />}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-supplier-id">Supplier</Label>
-                            <select
-                                id="edit-supplier-id"
-                                value={data.supplier_id}
-                                onChange={(e) => setData('supplier_id', e.target.value)}
-                                className="w-full rounded border px-3 py-2"
-                            >
-                                <option value="">Select supplier</option>
-                                {suppliers.map((supplier) => (
-                                    <option key={supplier.id} value={supplier.id}>
-                                        {supplier.name}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.supplier_id && <InputError message={errors.supplier_id} className="mt-1" />}
-                        </div>
+
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="edit-type">Type *</Label>
-                            <select
-                                id="edit-type"
-                                value={data.type}
-                                onChange={(e) => setData('type', e.target.value)}
-                                required
-                                className="w-full rounded border px-3 py-2"
-                            >
-                                <option value="received">Received</option>
-                                <option value="sold">Sold</option>
-                            </select>
-                            {errors.type && <InputError message={errors.type} className="mt-1" />}
+                            <Label htmlFor="edit-type">Type</Label>
+                            <div className="w-full rounded border px-3 py-2 bg-gray-50 text-gray-700">
+                                Stock In (Received)
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -149,35 +117,7 @@ function EditStockMovementModal({ isOpen, onClose, stockMovement, products, supp
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-unit-cost">Unit Cost per Carton (GH₵)</Label>
-                            <Input
-                                id="edit-unit-cost"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
-                                value={data.unit_cost}
-                                onChange={(e) => setData('unit_cost', e.target.value)}
-                            />
-                            {errors.unit_cost && <InputError message={errors.unit_cost} className="mt-1" />}
-                        </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-total-cost">Total Cost (GH₵)</Label>
-                            <Input
-                                id="edit-total-cost"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
-                                value={data.total_cost}
-                                onChange={(e) => setData('total_cost', e.target.value)}
-                            />
-                            {errors.total_cost && <InputError message={errors.total_cost} className="mt-1" />}
-                        </div>
-                    </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-notes">Notes</Label>

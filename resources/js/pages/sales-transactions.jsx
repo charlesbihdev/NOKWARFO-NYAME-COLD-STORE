@@ -7,7 +7,7 @@ import AddTransactionModal from '../components/sales/AddTransactionmodal';
 import SalesTable from '../components/sales/salesTable';
 
 function SalesTransactions({ sales_transactions = [], products = [], customers = [] }) {
-    console.log(products);
+
     const [open, setOpen] = useState(false);
     // Cart-style items state
     const [items, setItems] = useState([{ product_id: '', qty: '', unit_selling_price: '', total: '' }]);
@@ -24,7 +24,7 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
         payment_type: 'cash',
     });
 
-    // console.log(form.errors);
+    
 
     // Update form items when items state changes
     useEffect(() => {
