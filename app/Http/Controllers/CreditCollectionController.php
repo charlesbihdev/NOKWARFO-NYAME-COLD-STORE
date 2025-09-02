@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CreditCollection;
 use App\Models\Customer;
-use App\Models\Expense;
+
 use App\Models\Sale;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -93,18 +93,7 @@ class CreditCollectionController extends Controller
             return null;
         })->filter()->values();
 
-        // Get today's expenses
-        $expenses = Expense::whereDate('date', today())
-            ->get()
-            ->map(function ($expense) {
-                return [
-                    'id' => $expense->id,
-                    'description' => $expense->description,
-                    'amount' => $expense->amount,
-                    'notes' => $expense->notes,
-                    'date' => $expense->date->format('Y-m-d'),
-                ];
-            });
+
 
         // Customers list for dropdown
         $customers = Customer::orderBy('name')->get(['id', 'name']);
@@ -112,7 +101,6 @@ class CreditCollectionController extends Controller
         return Inertia::render('credit-collection', [
             'credit_collections' => $credit_collections,
             'outstanding_debts' => $outstanding_debts,
-            'expenses' => $expenses,
             'customers' => $customers,
         ]);
     }

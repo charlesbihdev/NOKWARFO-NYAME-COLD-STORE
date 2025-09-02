@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { useForm } from '@inertiajs/react';
-import { AlertTriangle, Plus, TrendingDown, Wallet } from 'lucide-react';
+import { AlertTriangle, Wallet } from 'lucide-react';
 import { useState } from 'react';
 
-function CreditCollection({ credit_collections = [], outstanding_debts = [], expenses = [], customers = [] }) {
+function CreditCollection({ credit_collections = [], outstanding_debts = [], customers = [] }) {
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [expenseOpen, setExpenseOpen] = useState(false);
+
 
     const filteredDebts = outstanding_debts.filter((debt) => debt.customer.toLowerCase().includes(searchQuery.toLowerCase()));
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -24,36 +24,11 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
         notes: '',
     });
 
-    const {
-        data: expenseFormData,
-        setData: setExpenseFormData,
-        post: expensePost,
-        processing: expenseProcessing,
-        errors: expenseErrors,
-        reset: resetExpense,
-    } = useForm({
-        description: '',
-        amount: '',
-        notes: '',
-        date: new Date().toISOString().split('T')[0],
-    });
+
 
     const breadcrumbs = [{ title: 'Credit Collection', href: '/credit-collection' }];
 
-    function handleExpenseSubmit(e) {
-        e.preventDefault();
-        expensePost(route('expenses.store'), {
-            onSuccess: () => {
-                resetExpense();
-                setExpenseOpen(false);
-            },
-            onError: (errors) => {
-                // The errors will be automatically handled by the form
-    
-            },
-            preserveScroll: true,
-        });
-    }
+
 
     function handleCollect(debt) {
 
@@ -77,8 +52,6 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
     }
 
     const totalCollected = credit_collections.reduce((sum, col) => sum + parseFloat(col.amount_collected), 0);
-    const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-    const netAmount = totalCollected - totalExpenses;
     const totalOutstandingDebt = outstanding_debts.reduce((sum, debt) => sum + parseFloat(debt.balance), 0);
 
     return (
@@ -89,7 +62,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Collections Today</CardTitle>
@@ -100,28 +73,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                             <p className="text-muted-foreground text-xs">From {credit_collections.length} customers</p>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Expenses Today</CardTitle>
-                            <TrendingDown className="h-4 w-4 text-red-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-red-600">GH₵{totalExpenses.toFixed(2)}</div>
-                            <p className="text-muted-foreground text-xs">{expenses.length} expense items</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Net Amount</CardTitle>
-                            <Wallet className="h-4 w-4 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className={`text-2xl font-bold ${netAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                GH₵{netAmount.toFixed(2)}
-                            </div>
-                            <p className="text-muted-foreground text-xs">Collections - Expenses</p>
-                        </CardContent>
-                    </Card>
+
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Outstanding</CardTitle>
@@ -166,96 +118,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], exp
                         </CardContent>
                     </Card>
 
-                    {/* Daily Expenses */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>Daily Expenses</CardTitle>
-                            <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Expense
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Expense</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={handleExpenseSubmit} className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="description" className="text-right">
-                                                Description
-                                            </Label>
-                                            <div className="col-span-3">
-                                                <Input
-                                                    id="description"
-                                                    placeholder="Expense description"
-                                                    value={expenseFormData.description}
-                                                    onChange={(e) => setExpenseFormData('description', e.target.value)}
-                                                    required
-                                                />
-                                                {expenseErrors.description && <InputError message={expenseErrors.description} className="mt-2" />}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="amount" className="text-right">
-                                                Amount (GH₵)
-                                            </Label>
-                                            <div className="col-span-3">
-                                                <Input
-                                                    id="amount"
-                                                    type="number"
-                                                    placeholder="0.00"
-                                                    value={expenseFormData.amount}
-                                                    onChange={(e) => setExpenseFormData('amount', e.target.value)}
-                                                    required
-                                                />
-                                                {expenseErrors.amount && <InputError message={expenseErrors.amount} className="mt-2" />}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Label htmlFor="notes" className="text-right">
-                                                Notes
-                                            </Label>
-                                            <div className="col-span-3">
-                                                <Input
-                                                    id="notes"
-                                                    placeholder="Optional notes"
-                                                    value={expenseFormData.notes}
-                                                    onChange={(e) => setExpenseFormData('notes', e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                        <Button type="submit" disabled={expenseProcessing}>
-                                            {expenseProcessing ? 'Adding...' : 'Add Expense'}
-                                        </Button>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead>Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {expenses.map((expense, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="font-medium">{expense.description}</TableCell>
-                                            <TableCell className="font-medium text-red-600">GH₵{parseFloat(expense.amount).toFixed(2)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow className="bg-red-50">
-                                        <TableCell className="font-bold">Total Expenses</TableCell>
-                                        <TableCell className="font-bold text-red-600">GH₵{totalExpenses.toFixed(2)}</TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+
                 </div>
 
                 {/* Outstanding Debts Table */}

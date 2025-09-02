@@ -97,7 +97,7 @@ export default function DailySalesReport({
                     <SummaryCard
                         title="Products Sold"
                         icon={Package}
-                        amount={Number(summary.totalProductsSold || 0)}
+                        amount={summary.totalProductsSold || '0'}
                         subtitle="Total units"
                         color="text-purple-600"
                     />
