@@ -96,17 +96,14 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
         setData('items', newItems);
     }
 
-    function handleProductSelect(index, productId) {
-        const product = products.find(p => p.id == productId);
-        if (product) {
-            const updatedItems = [...editItems];
-            updatedItems[index] = {
-                ...updatedItems[index],
-                product_name: product.name
-            };
-            setEditItems(updatedItems);
-            setData('items', updatedItems);
-        }
+    function handleProductChange(index, productName) {
+        const updatedItems = [...editItems];
+        updatedItems[index] = {
+            ...updatedItems[index],
+            product_name: productName
+        };
+        setEditItems(updatedItems);
+        setData('items', updatedItems);
     }
 
     if (!trip) return null;
@@ -237,21 +234,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
                                         <div className="space-y-3">
                                             <div>
                                                 <Label className="text-sm font-medium">Product *</Label>
-                                                <Select
-                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
-                                                >
-                                                    <SelectTrigger className="mt-1">
-                                                        <SelectValue placeholder="Select a product" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {products.map((product) => (
-                                                            <SelectItem key={product.id} value={product.id.toString()}>
-                                                                {product.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`product-list-${index}`}
+                                                    value={item.product_name}
+                                                    onChange={(e) => handleProductChange(index, e.target.value)}
+                                                    placeholder="Type or select a product"
+                                                    className="mt-1"
+                                                />
+                                                <datalist id={`product-list-${index}`}>
+                                                    {products.map((product) => (
+                                                        <option key={product.id} value={product.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
                                                 )}
@@ -259,26 +253,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
 
                                             <div>
                                                 <Label className="text-sm font-medium">Supplier</Label>
-                                                <Select
-                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(supplierId) => {
-                                                        const supplier = suppliers.find(s => s.id == supplierId);
-                                                        if (supplier) {
-                                                            updateEditItem(index, 'supplier_name', supplier.name);
-                                                        }
-                                                    }}
-                                                >
-                                                    <SelectTrigger className="mt-1">
-                                                        <SelectValue placeholder="Select a supplier" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {suppliers.map((supplier) => (
-                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                                                {supplier.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`supplier-list-${index}`}
+                                                    value={item.supplier_name}
+                                                    onChange={(e) => updateEditItem(index, 'supplier_name', e.target.value)}
+                                                    placeholder="Type or select a supplier"
+                                                    className="mt-1"
+                                                />
+                                                <datalist id={`supplier-list-${index}`}>
+                                                    {suppliers.map((supplier) => (
+                                                        <option key={supplier.id} value={supplier.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
                                                 )}
@@ -362,21 +348,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
                                         <div className="grid grid-cols-4 gap-4 items-end">
                                             <div className="col-span-1">
                                                 <Label className="text-sm font-medium mb-2 block">Product *</Label>
-                                                <Select
-                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
-                                                >
-                                                    <SelectTrigger className="w-full h-12">
-                                                        <SelectValue placeholder="Select a product" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {products.map((product) => (
-                                                            <SelectItem key={product.id} value={product.id.toString()}>
-                                                                {product.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`product-list-${index}`}
+                                                    value={item.product_name}
+                                                    onChange={(e) => handleProductChange(index, e.target.value)}
+                                                    placeholder="Type or select a product"
+                                                    className="w-full h-12"
+                                                />
+                                                <datalist id={`product-list-${index}`}>
+                                                    {products.map((product) => (
+                                                        <option key={product.id} value={product.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
                                                 )}
@@ -384,26 +367,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
 
                                             <div className="col-span-1">
                                                 <Label className="text-sm font-medium mb-2 block">Supplier</Label>
-                                                <Select
-                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(supplierId) => {
-                                                        const supplier = suppliers.find(s => s.id == supplierId);
-                                                        if (supplier) {
-                                                            updateEditItem(index, 'supplier_name', supplier.name);
-                                                        }
-                                                    }}
-                                                >
-                                                    <SelectTrigger className="w-full h-12">
-                                                        <SelectValue placeholder="Select a supplier" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {suppliers.map((supplier) => (
-                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                                                {supplier.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`supplier-list-${index}`}
+                                                    value={item.supplier_name}
+                                                    onChange={(e) => updateEditItem(index, 'supplier_name', e.target.value)}
+                                                    placeholder="Type or select a supplier"
+                                                    className="w-full h-12"
+                                                />
+                                                <datalist id={`supplier-list-${index}`}>
+                                                    {suppliers.map((supplier) => (
+                                                        <option key={supplier.id} value={supplier.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
                                                 )}
@@ -497,21 +472,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
                                         <div className="grid grid-cols-3 gap-3 items-end">
                                             <div>
                                                 <Label className="text-sm font-medium mb-2 block">Product *</Label>
-                                                <Select
-                                                    value={item.product_name ? products.find(p => p.name === item.product_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(productId) => handleProductSelect(index, productId)}
-                                                >
-                                                    <SelectTrigger className="w-full h-10">
-                                                        <SelectValue placeholder="Select a product" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {products.map((product) => (
-                                                            <SelectItem key={product.id} value={product.id.toString()}>
-                                                                {product.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`product-list-${index}`}
+                                                    value={item.product_name}
+                                                    onChange={(e) => handleProductChange(index, e.target.value)}
+                                                    placeholder="Type or select a product"
+                                                    className="w-full h-10"
+                                                />
+                                                <datalist id={`product-list-${index}`}>
+                                                    {products.map((product) => (
+                                                        <option key={product.id} value={product.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
                                                 )}
@@ -519,26 +491,18 @@ function EditTripModal({ isOpen, onClose, trip, products = [], suppliers = [], e
 
                                             <div>
                                                 <Label className="text-sm font-medium mb-2 block">Supplier</Label>
-                                                <Select
-                                                    value={item.supplier_name ? suppliers.find(s => s.name === item.supplier_name)?.id?.toString() || '' : ''}
-                                                    onValueChange={(supplierId) => {
-                                                        const supplier = suppliers.find(s => s.id == supplierId);
-                                                        if (supplier) {
-                                                            updateEditItem(index, 'supplier_name', supplier.name);
-                                                        }
-                                                    }}
-                                                >
-                                                    <SelectTrigger className="w-full h-10">
-                                                        <SelectValue placeholder="Select a supplier" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {suppliers.map((supplier) => (
-                                                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                                                {supplier.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Input
+                                                    list={`supplier-list-${index}`}
+                                                    value={item.supplier_name}
+                                                    onChange={(e) => updateEditItem(index, 'supplier_name', e.target.value)}
+                                                    placeholder="Type or select a supplier"
+                                                    className="w-full h-10"
+                                                />
+                                                <datalist id={`supplier-list-${index}`}>
+                                                    {suppliers.map((supplier) => (
+                                                        <option key={supplier.id} value={supplier.name} />
+                                                    ))}
+                                                </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
                                                 )}
