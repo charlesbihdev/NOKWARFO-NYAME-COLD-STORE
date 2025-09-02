@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { Plus, Receipt, TrendingDown } from 'lucide-react';
+import { Plus, Receipt, TrendingDown, Edit, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
@@ -37,8 +37,18 @@ export default function Expenses({
     const [endDate, setEndDate] = useState(end_date || defaultEndDate);
     const [typeFilter, setTypeFilter] = useState(type_filter || 'all');
     const [open, setOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingExpense, setEditingExpense] = useState(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        description: '',
+        amount: '',
+        type: 'others',
+        notes: '',
+        date: new Date().toISOString().split('T')[0],
+    });
+
+    const { data: editData, setData: setEditData, put, processing: editProcessing, errors: editErrors, reset: resetEdit } = useForm({
         description: '',
         amount: '',
         type: 'others',
@@ -115,6 +125,38 @@ export default function Expenses({
             },
             preserveScroll: true,
         });
+    }
+
+    function handleEditSubmit(e) {
+        e.preventDefault();
+        put(route('expenses.update', editingExpense.id), {
+            onSuccess: () => {
+                resetEdit();
+                setEditOpen(false);
+                setEditingExpense(null);
+            },
+            preserveScroll: true,
+        });
+    }
+
+    function handleEdit(expense) {
+        setEditingExpense(expense);
+        setEditData({
+            description: expense.description,
+            amount: expense.amount,
+            type: expense.type,
+            notes: expense.notes || '',
+            date: new Date(expense.date).toISOString().split('T')[0],
+        });
+        setEditOpen(true);
+    }
+
+    function handleDelete(expense) {
+        if (confirm(`Are you sure you want to delete the expense "${expense.description}"?`)) {
+            router.delete(route('expenses.destroy', expense.id), {
+                preserveScroll: true,
+            });
+        }
     }
 
     return (
@@ -222,6 +264,102 @@ export default function Expenses({
                             </form>
                         </DialogContent>
                     </Dialog>
+
+                    {/* Edit Expense Modal */}
+                    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Edit Expense</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleEditSubmit} className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-description" className="text-right">
+                                        Description
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Input
+                                            id="edit-description"
+                                            placeholder="Expense description"
+                                            value={editData.description}
+                                            onChange={(e) => setEditData('description', e.target.value)}
+                                            required
+                                        />
+                                        {editErrors.description && <InputError message={editErrors.description} className="mt-2" />}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-amount" className="text-right">
+                                        Amount (GH₵)
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Input
+                                            id="edit-amount"
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={editData.amount}
+                                            onChange={(e) => setEditData('amount', e.target.value)}
+                                            required
+                                        />
+                                        {editErrors.amount && <InputError message={editErrors.amount} className="mt-2" />}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-type" className="text-right">
+                                        Type
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Select value={editData.type} onValueChange={(value) => setEditData('type', value)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select expense type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {expenseTypes.map((type) => (
+                                                    <SelectItem key={type.value} value={type.value}>
+                                                        {type.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {editErrors.type && <InputError message={editErrors.type} className="mt-2" />}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-date" className="text-right">
+                                        Date
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Input
+                                            id="edit-date"
+                                            type="date"
+                                            value={editData.date}
+                                            onChange={(e) => setEditData('date', e.target.value)}
+                                            required
+                                        />
+                                        {editErrors.date && <InputError message={editErrors.date} className="mt-2" />}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-notes" className="text-right">
+                                        Notes
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Textarea
+                                            id="edit-notes"
+                                            placeholder="Optional notes"
+                                            value={editData.notes}
+                                            onChange={(e) => setEditData('notes', e.target.value)}
+                                            rows={3}
+                                        />
+                                        {editErrors.notes && <InputError message={editErrors.notes} className="mt-2" />}
+                                    </div>
+                                </div>
+                                <Button type="submit" disabled={editProcessing}>
+                                    {editProcessing ? 'Updating...' : 'Update Expense'}
+                                </Button>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                 {/* Filters */}
@@ -274,6 +412,7 @@ export default function Expenses({
                                     <TableHead>Type</TableHead>
                                     <TableHead>Amount</TableHead>
                                     <TableHead>Notes</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -295,11 +434,31 @@ export default function Expenses({
                                             <TableCell className="text-gray-500">
                                                 {expense.notes || '-'}
                                             </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(expense)}
+                                                        className="h-8 w-8 p-0"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(expense)}
+                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                                             No expenses found for the selected period and filters.
                                         </TableCell>
                                     </TableRow>

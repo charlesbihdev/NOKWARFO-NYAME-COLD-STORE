@@ -64,4 +64,32 @@ class ExpenseController extends Controller
             return back()->withErrors(['error' => 'Failed to record expense. Please try again.'])->withInput();
         }
     }
+
+    public function update(Request $request, Expense $expense)
+    {
+        $validated = $request->validate([
+            'description' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'type' => 'required|in:fixed,additional,car_saving,trip_saving,loan_saving,others',
+            'notes' => 'nullable|string',
+            'date' => 'required|date',
+        ]);
+
+        try {
+            $expense->update($validated);
+            return back()->with('success', 'Expense updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to update expense. Please try again.'])->withInput();
+        }
+    }
+
+    public function destroy(Expense $expense)
+    {
+        try {
+            $expense->delete();
+            return back()->with('success', 'Expense deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to delete expense. Please try again.']);
+        }
+    }
 }
