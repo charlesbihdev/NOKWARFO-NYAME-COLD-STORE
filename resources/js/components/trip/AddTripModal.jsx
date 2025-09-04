@@ -91,13 +91,13 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
     }
 
     function handleProductChange(index, productName) {
-        const updatedItems = [...items];
-        updatedItems[index] = {
-            ...updatedItems[index],
+            const updatedItems = [...items];
+            updatedItems[index] = {
+                ...updatedItems[index],
             product_name: productName
-        };
-        setItems(updatedItems);
-        setData('items', updatedItems);
+            };
+            setItems(updatedItems);
+            setData('items', updatedItems);
     }
 
     function updateItem(index, field, value) {
@@ -243,9 +243,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="mt-1"
                                                 />
                                                 <datalist id={`product-list-${index}`}>
-                                                    {products.map((product) => (
+                                                        {products.map((product) => (
                                                         <option key={product.id} value={product.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
@@ -262,9 +262,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="mt-1"
                                                 />
                                                 <datalist id={`supplier-list-${index}`}>
-                                                    {suppliers.map((supplier) => (
+                                                        {suppliers.map((supplier) => (
                                                         <option key={supplier.id} value={supplier.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
@@ -357,9 +357,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="w-full h-12"
                                                 />
                                                 <datalist id={`product-list-${index}`}>
-                                                    {products.map((product) => (
+                                                        {products.map((product) => (
                                                         <option key={product.id} value={product.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
@@ -376,9 +376,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="w-full h-12"
                                                 />
                                                 <datalist id={`supplier-list-${index}`}>
-                                                    {suppliers.map((supplier) => (
+                                                        {suppliers.map((supplier) => (
                                                         <option key={supplier.id} value={supplier.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />
@@ -481,9 +481,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="w-full h-10"
                                                 />
                                                 <datalist id={`product-list-${index}`}>
-                                                    {products.map((product) => (
+                                                        {products.map((product) => (
                                                         <option key={product.id} value={product.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.product_name`] && (
                                                     <InputError message={errors[`items.${index}.product_name`]} className="mt-1" />
@@ -500,9 +500,9 @@ function AddTripModal({ isOpen, onClose, products = [], suppliers = [], errors =
                                                     className="w-full h-10"
                                                 />
                                                 <datalist id={`supplier-list-${index}`}>
-                                                    {suppliers.map((supplier) => (
+                                                        {suppliers.map((supplier) => (
                                                         <option key={supplier.id} value={supplier.name} />
-                                                    ))}
+                                                        ))}
                                                 </datalist>
                                                 {errors[`items.${index}.supplier_name`] && (
                                                     <InputError message={errors[`items.${index}.supplier_name`]} className="mt-1" />

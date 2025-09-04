@@ -23,13 +23,12 @@ export default function StockActivitySummary({ stock_activity_summary, start_dat
                         <TableRow>
                             <TableHead>Product</TableHead>
                             <TableHead>Stock Received today</TableHead>
-                            <TableHead>Previous Stock</TableHead>
-                            <TableHead className="bg-blue-50">Total Available</TableHead>
+                            <TableHead>Available Stock</TableHead>
+                            <TableHead className="bg-blue-50">Total available stock</TableHead>
                             <TableHead>Cash Sales</TableHead>
                             <TableHead>Credit Sales</TableHead>
                             <TableHead>Partial Sales</TableHead>
                             <TableHead className="bg-green-50">Total Sales</TableHead>
-                            <TableHead>Corrections</TableHead>
                             <TableHead className="bg-yellow-50">Remaining Stock</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -45,15 +44,6 @@ export default function StockActivitySummary({ stock_activity_summary, start_dat
                                     <TableCell className="text-center">{row.credit_sales}</TableCell>
                                     <TableCell className="text-center">{row.partial_sales}</TableCell>
                                     <TableCell className="bg-green-50 text-center font-semibold">{row.total_sales}</TableCell>
-                                    <TableCell className="text-center">
-                                        <span className={`text-sm ${
-                                            row.corrections.includes('Added') ? 'text-green-600 font-medium' : 
-                                            row.corrections.includes('Reduced') ? 'text-red-600 font-medium' : 
-                                            'text-gray-500'
-                                        }`}>
-                                            {row.corrections}
-                                        </span>
-                                    </TableCell>
                                     <TableCell className="bg-yellow-50 text-center font-semibold">{row.remaining_stock}</TableCell>
                                 </TableRow>
                             ))
@@ -71,7 +61,7 @@ export default function StockActivitySummary({ stock_activity_summary, start_dat
             <div className="text-muted-foreground mt-3 flex flex-col gap-1 text-xs">
                 <div className="flex items-center gap-2">
                     <span className="inline-block h-4 w-4 rounded-sm border border-blue-100 bg-blue-50"></span>
-                    <span>Total Available = Previous Stock + Stock Received + Adjustments</span>
+                    <span>Total available stock = Available stock + Stock received + Adjustments</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="inline-block h-4 w-4 rounded-sm border border-green-100 bg-green-50"></span>

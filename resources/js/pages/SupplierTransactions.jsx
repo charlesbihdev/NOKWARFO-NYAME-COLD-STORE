@@ -336,14 +336,10 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                     day: '2-digit',
                                                                     month: 'short',
                                                                     year: 'numeric'
-                                                                })} at {new Date(item.created_at || item.transaction_date).toLocaleTimeString('en-GB', {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                    hour12: true
                                                                 })}
                                                             </h3>
                                                         </div>
-                                                        <span className="text-sm text-gray-500">Transaction #{item.id}</span>
+                                                        
                                                         {item.outstanding_balance > 0 && (
                                                             <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">
                                                                 Outstanding: {formatCurrency(item.outstanding_balance)}
@@ -489,14 +485,10 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                     day: '2-digit',
                                                                     month: 'short',
                                                                     year: 'numeric'
-                                                                })} at {new Date(item.created_at || item.payment_date).toLocaleTimeString('en-GB', {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                    hour12: true
                                                                 })}
                                                             </h3>
                                                         </div>
-                                                        <span className="text-sm text-gray-500">Payment #{item.id}</span>
+                                                        
                                                     </div>
                                                     
                                                     <div className="flex gap-2">

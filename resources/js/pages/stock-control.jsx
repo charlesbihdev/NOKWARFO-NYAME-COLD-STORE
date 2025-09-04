@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import DateRangePicker from '../components/DateRangePicker';
+import { Input } from '@/components/ui/input';
 
 import AddStockModal from '../components/stock/AddStockModal';
 import StockAdjustmentModal from '../components/stock/StockAdjustmentModal';
@@ -23,10 +23,10 @@ export default function StockControl({ stock_movements = [], products = [], stoc
         product_id: '',
         quantity: '',
         notes: '',
+        date: new Date().toISOString().split('T')[0],
     });
 
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
     const breadcrumbs = [{ title: 'Stock Control', href: '/stock-control' }];
 
     function openAddStock(product) {
@@ -35,6 +35,7 @@ export default function StockControl({ stock_movements = [], products = [], stoc
             product_id: product.id,
             quantity: '',
             notes: '',
+            date: selectedDate || new Date().toISOString().split('T')[0],
         });
         setIsAddModalOpen(true);
     }
@@ -83,31 +84,23 @@ export default function StockControl({ stock_movements = [], products = [], stoc
         }
     }
 
-    const handleDateRangeChange = (value, type) => {
-        if (type === 'start') setStartDate(value);
-        else if (type === 'end') setEndDate(value);
-
-        if ((type === 'start' && endDate) || (type === 'end' && startDate)) {
-            router.get(
-                route('stock-control.index'),
-                {
-                    start_date: type === 'start' ? value : startDate,
-                    end_date: type === 'end' ? value : endDate,
-                },
-                {
-                    preserveState: true,
-                    replace: true,
-                },
-            );
+    const handleDateChange = (e) => {
+        const value = e.target.value;
+        setSelectedDate(value);
+        if (value) {
+            router.get(route('stock-control.index'), { date: value }, { preserveState: true, replace: true });
         }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <div className="min-h-screen space-y-6 bg-gray-100 p-6">
-                <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateRangeChange} />
+                <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium">As of date</label>
+                    <Input type="date" value={selectedDate} onChange={handleDateChange} className="w-auto" />
+                </div>
 
-                <StockActivitySummary stock_activity_summary={stock_activity_summary} start_date={startDate} end_date={endDate} />
+                <StockActivitySummary stock_activity_summary={stock_activity_summary} start_date={selectedDate} end_date={selectedDate} />
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Inventory Management</h1>
                 </div>

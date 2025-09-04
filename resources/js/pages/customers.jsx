@@ -305,7 +305,6 @@ function Customers() {
                                 placeholder="customer@email.com"
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
-                                required
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
