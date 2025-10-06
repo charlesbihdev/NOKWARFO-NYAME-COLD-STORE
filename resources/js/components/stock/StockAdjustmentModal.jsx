@@ -9,7 +9,9 @@ import { useEffect } from 'react';
 export default function StockAdjustmentModal({ isOpen, onClose, selectedProduct, errors = {} }) {
     const { data, setData, post, processing, reset, clearErrors } = useForm({
         product_id: '',
-        physical_count: '',
+        date: new Date().toISOString().split('T')[0],
+        available_stock_target: '',
+        received_today_target: '',
         notes: '',
         current_system_stock: '',
     });
@@ -23,7 +25,9 @@ export default function StockAdjustmentModal({ isOpen, onClose, selectedProduct,
             clearErrors();
             setData({
                 product_id: selectedProduct.id,
-                physical_count: '',
+                date: new Date().toISOString().split('T')[0],
+                available_stock_target: '',
+                received_today_target: '',
                 notes: '',
                 current_system_stock: selectedProduct.current_stock_display || '0',
             });
@@ -40,7 +44,9 @@ export default function StockAdjustmentModal({ isOpen, onClose, selectedProduct,
                 onClose();
             },
             preserveScroll: true,
-            preserveState: false,
+            preserveState: true,
+            // Include movements so the new adjustment row appears without full refresh
+            only: ['products', 'stock_movements', 'stock_activity_summary', 'errors', 'flash'],
         });
     }
 
@@ -63,37 +69,49 @@ export default function StockAdjustmentModal({ isOpen, onClose, selectedProduct,
                     <input type="hidden" name="product_id" value={data.product_id} />
                     
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="current_stock" className="text-right">
-                            Current System Stock
+                        <Label htmlFor="date" className="text-right">
+                            Date
                         </Label>
                         <div className="col-span-3">
                             <Input
-                                id="current_stock"
-                                type="text"
-                                value={data.current_system_stock || '0'}
-                                disabled
-                                className="bg-gray-100"
+                                id="date"
+                                type="date"
+                                value={data.date}
+                                onChange={(e) => setData('date', e.target.value)}
+                                required
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="physical_count" className="text-right">
-                            Physical Count *
+                        <Label htmlFor="available_stock_target" className="text-right">
+                            Set Available Stock (as of date)
                         </Label>
                         <div className="col-span-3">
                             <Input
-                                id="physical_count"
+                                id="available_stock_target"
                                 type="text"
                                 placeholder="e.g., 5C2L, 10C, 15L, or 20"
-                                value={data.physical_count}
-                                onChange={(e) => setData('physical_count', e.target.value)}
-                                required
+                                value={data.available_stock_target}
+                                onChange={(e) => setData('available_stock_target', e.target.value)}
                             />
-                            <div className="mt-1 text-xs text-gray-500">
-                                Enter the actual count from your physical inventory
-                            </div>
-                            {errors.physical_count && <div className="mt-1 text-xs text-red-500">{errors.physical_count}</div>}
+                            {errors.available_stock_target && <div className="mt-1 text-xs text-red-500">{errors.available_stock_target}</div>}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="received_today_target" className="text-right">
+                            Set Stock Received today (for date)
+                        </Label>
+                        <div className="col-span-3">
+                            <Input
+                                id="received_today_target"
+                                type="text"
+                                placeholder="e.g., 5C2L, 10C, 15L, or 20"
+                                value={data.received_today_target}
+                                onChange={(e) => setData('received_today_target', e.target.value)}
+                            />
+                            {errors.received_today_target && <div className="mt-1 text-xs text-red-500">{errors.received_today_target}</div>}
                         </div>
                     </div>
 
@@ -120,7 +138,7 @@ export default function StockAdjustmentModal({ isOpen, onClose, selectedProduct,
                         <div className="col-span-3">
                             <div className="p-3 bg-blue-50 rounded border">
                                 <div className="text-sm text-gray-600">
-                                    Enter the physical count and reason. The system will automatically calculate the adjustment needed.
+                                    Fill any field you want to set for the selected date. The system will compute adjustments to sync to those targets.
                                 </div>
                             </div>
                         </div>

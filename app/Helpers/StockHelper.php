@@ -48,9 +48,9 @@ class StockHelper
     {
         $input = trim($input);
         
-        // If it's just a number, treat as lines
+        // If it's just a number, treat as cartons (convert to total lines)
         if (is_numeric($input)) {
-            return (int) $input;
+            return (int) $input * $lines_per_carton;
         }
         
         $totalLines = 0;
@@ -67,9 +67,9 @@ class StockHelper
             $totalLines += $lines;
         }
         
-        // If no matches found, try to parse as just a number
+        // If no matches found, try to parse as just a number (cartons)
         if ($totalLines === 0 && is_numeric($input)) {
-            $totalLines = (int) $input;
+            $totalLines = (int) $input * $lines_per_carton;
         }
         
         return $totalLines;

@@ -12,6 +12,20 @@ export default function AddStockModal({ isOpen, onClose, selectedProduct, data, 
                 </DialogHeader>
                 <form onSubmit={onSubmit} className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="date" className="text-right">
+                            Date
+                        </Label>
+                        <div className="col-span-3">
+                            <Input
+                                id="date"
+                                type="date"
+                                value={data.date || new Date().toISOString().split('T')[0]}
+                                onChange={(e) => setData('date', e.target.value)}
+                                required
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="quantity" className="text-right">
                             Quantity *
                         </Label>

@@ -119,6 +119,36 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
         return `GHC ${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
+    // Safely parse a YYYY-MM-DD string into a local Date (no timezone shift)
+    function parseLocalDate(dateString) {
+        if (!dateString || typeof dateString !== 'string') {
+            return null;
+        }
+        const parts = dateString.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) {
+            // Fallback if it's not a date-only string
+            const fallback = new Date(dateString);
+            return isNaN(fallback) ? null : fallback;
+        }
+        const [year, month, day] = parts;
+        return new Date(year, month - 1, day);
+    }
+
+    function formatDateDisplay(dateLike) {
+        if (!dateLike) {
+            return '';
+        }
+        const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
+        if (isNaN(d)) {
+            return '';
+        }
+        return d.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    }
+
 
 
     return (
@@ -146,17 +176,9 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <p className="text-sm text-blue-700">
                             📅 Showing data for: <span className="font-medium">
-                                {new Date(start_date).toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric'
-                                })}
+                                {formatDateDisplay(parseLocalDate(start_date))}
                             </span> to <span className="font-medium">
-                                {new Date(end_date).toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric'
-                                })}
+                                {formatDateDisplay(parseLocalDate(end_date))}
                             </span>
                         </p>
                     </div>
@@ -291,7 +313,8 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     timelineItems.push({
                                         ...transaction,
                                         type: 'transaction',
-                                        sortDate: new Date(transaction.created_at || transaction.transaction_date)
+                                        // Prefer the explicit transaction_date selected by the user
+                                        sortDate: parseLocalDate(transaction.transaction_date) || new Date(transaction.created_at)
                                     });
                                 });
                                 
@@ -300,8 +323,8 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     // Check if this payment is linked to any transaction
                                     const isLinkedToTransaction = transactions.data.some(transaction => {
                                         // Check if payment amount matches transaction's todays_payments and they're from the same time
-                                        const paymentTime = new Date(payment.created_at || payment.payment_date);
-                                        const transactionTime = new Date(transaction.created_at || transaction.transaction_date);
+                                        const paymentTime = parseLocalDate(payment.payment_date) || new Date(payment.created_at);
+                                        const transactionTime = parseLocalDate(transaction.transaction_date) || new Date(transaction.created_at);
                                         const timeDiff = Math.abs(paymentTime - transactionTime);
                                         const isSameTime = timeDiff < 60000; // Within 1 minute
                                         const isSameAmount = parseFloat(payment.payment_amount) === parseFloat(transaction.todays_payments || 0);
@@ -314,7 +337,8 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                         timelineItems.push({
                                             ...payment,
                                             type: 'payment',
-                                            sortDate: new Date(payment.created_at || payment.payment_date)
+                                            // Prefer the explicit payment_date selected by the user
+                                            sortDate: parseLocalDate(payment.payment_date) || new Date(payment.created_at)
                                         });
                                     }
                                 });
@@ -332,18 +356,10 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                                                             <h3 className="text-base font-semibold">
-                                                                {new Date(item.created_at || item.transaction_date).toLocaleDateString('en-GB', {
-                                                                    day: '2-digit',
-                                                                    month: 'short',
-                                                                    year: 'numeric'
-                                                                })} at {new Date(item.created_at || item.transaction_date).toLocaleTimeString('en-GB', {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                    hour12: true
-                                                                })}
+                                                                {formatDateDisplay(parseLocalDate(item.transaction_date) || new Date(item.created_at))}
                                                             </h3>
                                                         </div>
-                                                        <span className="text-sm text-gray-500">Transaction #{item.id}</span>
+                                                        
                                                         {item.outstanding_balance > 0 && (
                                                             <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">
                                                                 Outstanding: {formatCurrency(item.outstanding_balance)}
@@ -485,18 +501,10 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                                                             <h3 className="text-base font-semibold">
-                                                                {new Date(item.created_at || item.payment_date).toLocaleDateString('en-GB', {
-                                                                    day: '2-digit',
-                                                                    month: 'short',
-                                                                    year: 'numeric'
-                                                                })} at {new Date(item.created_at || item.payment_date).toLocaleTimeString('en-GB', {
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                    hour12: true
-                                                                })}
+                                                                {formatDateDisplay(parseLocalDate(item.payment_date) || new Date(item.created_at))}
                                                             </h3>
                                                         </div>
-                                                        <span className="text-sm text-gray-500">Payment #{item.id}</span>
+                                                        
                                                     </div>
                                                     
                                                     <div className="flex gap-2">

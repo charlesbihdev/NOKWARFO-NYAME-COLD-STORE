@@ -13,9 +13,15 @@ class StockControlController extends Controller
 {
     public function index(Request $request)
     {
-        // Get dates from request (optional)
+        // Support single-date mode (preferred) and legacy start/end
+        $singleDate = $request->query('date');
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
+
+        if ($singleDate) {
+            $startDate = $singleDate;
+            $endDate = $singleDate;
+        }
 
         // Load data - only apply date filters if both dates are provided
         if ($startDate && $endDate) {
@@ -113,30 +119,44 @@ class StockControlController extends Controller
                     ->where('type', 'received')
                     ->sum('quantity');
 
-                // Stock Adjustments in date range
+                // Stock Adjustments in date range (exclude set-tagged adjustments to avoid double-counting with baselines)
                 $adjustmentsIn = $product->stockMovements()
                     ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                          ->orWhere(function ($q2) {
+                              $q2->where('notes', 'not like', '%[set:available]%')
+                                 ->where('notes', 'not like', '%[set:received]%');
+                          });
+                    })
                     ->sum('quantity');
 
                 $adjustmentsOut = $product->stockMovements()
                     ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                          ->orWhere(function ($q2) {
+                              $q2->where('notes', 'not like', '%[set:available]%')
+                                 ->where('notes', 'not like', '%[set:received]%');
+                          });
+                    })
                     ->sum('quantity');
 
                 // Previous Stock
                 $receivedBefore = $product->stockMovements()
-                    ->where('created_at', '<', $startDate)
+                    ->where('created_at', '<=', $startDate . ' 00:00:00')
                     ->where('type', 'received')
                     ->sum('quantity');
 
                 $adjustmentsInBefore = $product->stockMovements()
-                    ->where('created_at', '<', $startDate)
+                    ->where('created_at', '<=', $startDate . ' 00:00:00')
                     ->where('type', 'adjustment_in')
                     ->sum('quantity');
 
                 $adjustmentsOutBefore = $product->stockMovements()
-                    ->where('created_at', '<', $startDate)
+                    ->where('created_at', '<=', $startDate . ' 00:00:00')
                     ->where('type', 'adjustment_out')
                     ->sum('quantity');
 
@@ -167,157 +187,129 @@ class StockControlController extends Controller
                     })
                     ->sum('quantity');
 
+                // Include any explicit received target adjustments in the displayed "Stock Received today"
+                $setReceivedIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $setReceivedOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $stockReceivedDisplay = $stockReceivedInRange + ($setReceivedIn - $setReceivedOut);
+
                 // Total sales in date range
                 $totalSalesInRange = $cashSales + $creditSales + $partialSales;
 
                 // Remaining stock
                 $remainingStock = $totalAvailable - $totalSalesInRange;
 
-                // Format corrections display - show summary instead of detailed list
-                $correctionsDisplay = '';
-                if ($adjustmentsIn > 0 || $adjustmentsOut > 0) {
-                    $adjustmentCount = 0;
-                    if ($adjustmentsIn > 0) $adjustmentCount++;
-                    if ($adjustmentsOut > 0) $adjustmentCount++;
-                    
-                    if ($adjustmentCount === 2) {
-                        $netAmount = $adjustmentsIn - $adjustmentsOut;
-                        if ($netAmount > 0) {
-                            $correctionsDisplay = "Net: Added " . StockHelper::formatCartonLine($netAmount, $product->lines_per_carton);
-                        } elseif ($netAmount < 0) {
-                            $correctionsDisplay = "Net: Reduced " . StockHelper::formatCartonLine(abs($netAmount), $product->lines_per_carton);
-                        } else {
-                            $correctionsDisplay = "Net: No change";
-                        }
-                    } elseif ($adjustmentsIn > 0) {
-                        $correctionsDisplay = "Added " . StockHelper::formatCartonLine($adjustmentsIn, $product->lines_per_carton);
-                    } elseif ($adjustmentsOut > 0) {
-                        $correctionsDisplay = "Reduced " . StockHelper::formatCartonLine($adjustmentsOut, $product->lines_per_carton);
-                    }
-                } else {
-                    $correctionsDisplay = "—";
-                }
+                $stock_activity_summary[] = [
+                    'product' => $product->name,
+                    'stock_received_today' => StockHelper::formatCartonLine($stockReceivedDisplay, $product->lines_per_carton),
+                    'previous_stock' => StockHelper::formatCartonLine($previousStock, $product->lines_per_carton),
+                    // Use display received and non-tagged adjustments for total available
+                    'total_available' => StockHelper::formatCartonLine($previousStock + $stockReceivedDisplay + $adjustmentsIn - $adjustmentsOut, $product->lines_per_carton),
+                    'cash_sales' => StockHelper::formatCartonLine($cashSales, $product->lines_per_carton),
+                    'credit_sales' => StockHelper::formatCartonLine($creditSales, $product->lines_per_carton),
+                    'partial_sales' => StockHelper::formatCartonLine($partialSales, $product->lines_per_carton),
+                    'total_sales' => StockHelper::formatCartonLine($totalSalesInRange, $product->lines_per_carton),
+                    'remaining_stock' => StockHelper::formatCartonLine(($previousStock + $stockReceivedDisplay + $adjustmentsIn - $adjustmentsOut) - $totalSalesInRange, $product->lines_per_carton),
+                ];
+            } else {
+                // Single-day summary for today (no date provided): mirror single-date logic
+                $today = now()->toDateString();
+
+                $receivedBefore = $product->stockMovements()
+                    ->where('created_at', '<=', $today . ' 00:00:00')
+                    ->where('type', 'received')
+                    ->sum('quantity');
+                $adjustmentsInBefore = $product->stockMovements()
+                    ->where('created_at', '<=', $today . ' 00:00:00')
+                    ->where('type', 'adjustment_in')
+                    ->sum('quantity');
+                $adjustmentsOutBefore = $product->stockMovements()
+                    ->where('created_at', '<=', $today . ' 00:00:00')
+                    ->where('type', 'adjustment_out')
+                    ->sum('quantity');
+                $previousStock = $receivedBefore + $adjustmentsInBefore - $adjustmentsOutBefore;
+
+                // Received today including [set:received] deltas
+                $receivedToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+                    ->where('type', 'received')
+                    ->sum('quantity');
+                $setReceivedIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+                $setReceivedOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+                $receivedDisplay = $receivedToday + ($setReceivedIn - $setReceivedOut);
+
+                // Adjustments today excluding set tags
+                $adjustmentsInToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                          ->orWhere(function ($q2) {
+                              $q2->where('notes', 'not like', '%[set:available]%')
+                                 ->where('notes', 'not like', '%[set:received]%');
+                          });
+                    })
+                    ->sum('quantity');
+                $adjustmentsOutToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$today . ' 00:00:00', $today . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                          ->orWhere(function ($q2) {
+                              $q2->where('notes', 'not like', '%[set:available]%')
+                                 ->where('notes', 'not like', '%[set:received]%');
+                          });
+                    })
+                    ->sum('quantity');
+
+                // Sales today
+                $cashSales = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($today) {
+                        $q->whereDate('created_at', $today)->where('payment_type', 'cash');
+                    })
+                    ->sum('quantity');
+                $creditSales = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($today) {
+                        $q->whereDate('created_at', $today)->where('payment_type', 'credit');
+                    })
+                    ->sum('quantity');
+                $partialSales = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($today) {
+                        $q->whereDate('created_at', $today)->where('payment_type', 'partial');
+                    })
+                    ->sum('quantity');
+                $totalSalesToday = $cashSales + $creditSales + $partialSales;
+
+                $totalAvailable = $previousStock + $receivedDisplay + $adjustmentsInToday - $adjustmentsOutToday;
+                $remaining = $totalAvailable - $totalSalesToday;
 
                 $stock_activity_summary[] = [
                     'product' => $product->name,
-                    'stock_received_today' => StockHelper::formatCartonLine($stockReceivedInRange, $product->lines_per_carton),
-                    'corrections' => $correctionsDisplay,
+                    'stock_received_today' => StockHelper::formatCartonLine($receivedDisplay, $product->lines_per_carton),
                     'previous_stock' => StockHelper::formatCartonLine($previousStock, $product->lines_per_carton),
                     'total_available' => StockHelper::formatCartonLine($totalAvailable, $product->lines_per_carton),
                     'cash_sales' => StockHelper::formatCartonLine($cashSales, $product->lines_per_carton),
                     'credit_sales' => StockHelper::formatCartonLine($creditSales, $product->lines_per_carton),
                     'partial_sales' => StockHelper::formatCartonLine($partialSales, $product->lines_per_carton),
-                    'total_sales' => StockHelper::formatCartonLine($totalSalesInRange, $product->lines_per_carton),
-                    'remaining_stock' => StockHelper::formatCartonLine($remainingStock, $product->lines_per_carton),
-                ];
-            } else {
-                // No date range - show current stock summary with all-time calculations
-                // Calculate all-time values for display
-                $totalReceived = $product->stockMovements()
-                    ->where('type', 'received')
-                    ->sum('quantity');
-
-                $adjustmentsIn = $product->stockMovements()
-                    ->where('type', 'adjustment_in')
-                    ->sum('quantity');
-
-                $adjustmentsOut = $product->stockMovements()
-                    ->where('type', 'adjustment_out')
-                    ->sum('quantity');
-
-                // All-time sales
-                $cashSales = $product->saleItems()
-                    ->whereHas('sale', function ($q) {
-                        $q->where('payment_type', 'cash');
-                    })
-                    ->sum('quantity');
-
-                $creditSales = $product->saleItems()
-                    ->whereHas('sale', function ($q) {
-                        $q->where('payment_type', 'credit');
-                    })
-                    ->sum('quantity');
-
-                $partialSales = $product->saleItems()
-                    ->whereHas('sale', function ($q) {
-                        $q->where('payment_type', 'partial');
-                    })
-                    ->sum('quantity');
-
-                $totalSales = $cashSales + $creditSales + $partialSales;
-
-                // Previous stock calculation (stock at the beginning of today, before today's activities)
-                $today = now()->toDateString();
-                $receivedBeforeToday = $product->stockMovements()
-                    ->where('created_at', '<', $today . ' 00:00:00')
-                    ->where('type', 'received')
-                    ->sum('quantity');
-
-                $adjustmentsInBeforeToday = $product->stockMovements()
-                    ->where('created_at', '<', $today . ' 00:00:00')
-                    ->where('type', 'adjustment_in')
-                    ->sum('quantity');
-
-                $adjustmentsOutBeforeToday = $product->stockMovements()
-                    ->where('created_at', '<', $today . ' 00:00:00')
-                    ->where('type', 'adjustment_out')
-                    ->sum('quantity');
-
-                $previousStock = $receivedBeforeToday + $adjustmentsInBeforeToday - $adjustmentsOutBeforeToday;
-
-                // Calculate today's stock received and adjustments
-                $today = now()->toDateString();
-                $stockReceivedToday = $product->stockMovements()
-                    ->whereDate('created_at', $today)
-                    ->where('type', 'received')
-                    ->sum('quantity');
-
-                $adjustmentsInToday = $product->stockMovements()
-                    ->whereDate('created_at', $today)
-                    ->where('type', 'adjustment_in')
-                    ->sum('quantity');
-
-                $adjustmentsOutToday = $product->stockMovements()
-                    ->whereDate('created_at', $today)
-                    ->where('type', 'adjustment_out')
-                    ->sum('quantity');
-
-                // Format corrections display - show summary instead of detailed list
-                $correctionsDisplay = '';
-                if ($adjustmentsInToday > 0 || $adjustmentsOutToday > 0) {
-                    $adjustmentCount = 0;
-                    if ($adjustmentsInToday > 0) $adjustmentCount++;
-                    if ($adjustmentsOutToday > 0) $adjustmentCount++;
-                    
-                    if ($adjustmentCount === 2) {
-                        $netAmount = $adjustmentsInToday - $adjustmentsOutToday;
-                        if ($netAmount > 0) {
-                            $correctionsDisplay = "Net: Added " . StockHelper::formatCartonLine($netAmount, $product->lines_per_carton);
-                        } elseif ($netAmount < 0) {
-                            $correctionsDisplay = "Net: Reduced " . StockHelper::formatCartonLine(abs($netAmount), $product->lines_per_carton);
-                        } else {
-                            $correctionsDisplay = "Net: No change";
-                        }
-                    } elseif ($adjustmentsInToday > 0) {
-                        $correctionsDisplay = "Added " . StockHelper::formatCartonLine($adjustmentsInToday, $product->lines_per_carton);
-                    } elseif ($adjustmentsOutToday > 0) {
-                        $correctionsDisplay = "Reduced " . StockHelper::formatCartonLine($adjustmentsOutToday, $product->lines_per_carton);
-                    }
-                } else {
-                    $correctionsDisplay = "—";
-                }
-
-                $stock_activity_summary[] = [
-                    'product' => $product->name,
-                    'stock_received_today' => StockHelper::formatCartonLine($stockReceivedToday, $product->lines_per_carton),
-                    'corrections' => $correctionsDisplay,
-                    'previous_stock' => StockHelper::formatCartonLine($previousStock, $product->lines_per_carton),
-                    'total_available' => $product->current_stock_display,
-                    'cash_sales' => StockHelper::formatCartonLine($cashSales, $product->lines_per_carton),
-                    'credit_sales' => StockHelper::formatCartonLine($creditSales, $product->lines_per_carton),
-                    'partial_sales' => StockHelper::formatCartonLine($partialSales, $product->lines_per_carton),
-                    'total_sales' => StockHelper::formatCartonLine($totalSales, $product->lines_per_carton),
-                    'remaining_stock' => $product->current_stock_display,
+                    'total_sales' => StockHelper::formatCartonLine($totalSalesToday, $product->lines_per_carton),
+                    'remaining_stock' => StockHelper::formatCartonLine($remaining, $product->lines_per_carton),
                 ];
             }
         }
@@ -327,6 +319,7 @@ class StockControlController extends Controller
             'products' => $products,
             'suppliers' => $suppliers,
             'stock_activity_summary' => $stock_activity_summary,
+            'date' => $startDate === $endDate ? $startDate : null,
             'start_date' => $startDate,
             'end_date' => $endDate,
         ]);
@@ -338,6 +331,7 @@ class StockControlController extends Controller
             'product_id' => 'required|exists:products,id',
             'notes' => 'nullable|string|max:1000',
             'quantity' => 'required|string|max:50', // Allow carton/line format
+            'date' => 'required|date',
         ];
 
         $validated = $request->validate($rules);
@@ -354,7 +348,16 @@ class StockControlController extends Controller
         // Always set type to 'received' for Add Stock
         $validated['type'] = 'received';
 
-        StockMovement::create($validated);
+        $movement = StockMovement::create([
+            'product_id' => $validated['product_id'],
+            'type' => $validated['type'],
+            'quantity' => $validated['quantity'],
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Set created_at to selected date preserving current time (use noon to avoid edge issues)
+        $movement->created_at = $validated['date'] . ' 12:00:00';
+        $movement->save();
 
         return redirect()->route('stock-control.index')
             ->with('success', 'Stock added Successfully.');
@@ -436,46 +439,116 @@ class StockControlController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'physical_count' => 'required|string',
+            'date' => 'required|date',
+            'available_stock_target' => 'nullable|string',
+            'received_today_target' => 'nullable|string',
             'notes' => 'nullable|string',
-            'current_system_stock' => 'required|string',
         ]);
 
         $product = Product::findOrFail($validated['product_id']);
-        
-        // Parse the carton/line format using StockHelper
-        $systemStock = StockHelper::parseCartonLineFormat($validated['current_system_stock'], $product->lines_per_carton);
-        $physicalCount = StockHelper::parseCartonLineFormat($validated['physical_count'], $product->lines_per_carton);
-        
-        if ($physicalCount === $systemStock) {
-            return back()->with('error', 'Physical count matches system stock. No adjustment needed.');
-        }
-        
-        if ($physicalCount > $systemStock) {
-            // Stock increased - create adjustment_in movement
-            $increaseAmount = $physicalCount - $systemStock;
-            StockMovement::create([
-                'product_id' => $validated['product_id'],
-                'type' => 'adjustment_in',
-                'quantity' => $increaseAmount,
-                'notes' => $validated['notes'],
-            ]);
-            
-            $message = 'Stock increased by ' . StockHelper::formatCartonLine($increaseAmount, $product->lines_per_carton);
-        } else {
-            // Stock decreased - create adjustment_out movement
-            $decreaseAmount = $systemStock - $physicalCount;
-            StockMovement::create([
-                'product_id' => $validated['product_id'],
-                'type' => 'adjustment_out',
-                'quantity' => $decreaseAmount,
-                'notes' => $validated['notes'],
-            ]);
-            
-            $message = 'Stock decreased by ' . StockHelper::formatCartonLine($decreaseAmount, $product->lines_per_carton);
+        $date = $validated['date'];
+
+        // Helpers to sum quantities
+        $sumMovements = function ($query) {
+            return (int) $query->sum('quantity');
+        };
+
+        // 1) Compute current Available display at start of day (baselineWithoutSet + netSetAvailableSoFar)
+        $receivedBefore = $product->stockMovements()
+            ->where('created_at', '<', $date . ' 00:00:00')
+            ->where('type', 'received');
+        $adjustInBefore = $product->stockMovements()
+            ->where('created_at', '<', $date . ' 00:00:00')
+            ->where('type', 'adjustment_in')
+            ->where(function ($q) {
+                $q->whereNull('notes')
+                  ->orWhere('notes', 'not like', '%[set:available]%');
+            });
+        $adjustOutBefore = $product->stockMovements()
+            ->where('created_at', '<', $date . ' 00:00:00')
+            ->where('type', 'adjustment_out')
+            ->where(function ($q) {
+                $q->whereNull('notes')
+                  ->orWhere('notes', 'not like', '%[set:available]%');
+            });
+        $baselineWithoutSet = $sumMovements($receivedBefore) + $sumMovements($adjustInBefore) - $sumMovements($adjustOutBefore);
+
+        $setAvailInSoFar = $sumMovements(
+            $product->stockMovements()
+                ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_in')
+                ->where('notes', 'like', '%[set:available]%')
+        );
+        $setAvailOutSoFar = $sumMovements(
+            $product->stockMovements()
+                ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_out')
+                ->where('notes', 'like', '%[set:available]%')
+        );
+        $currentAvailableDisplay = $baselineWithoutSet + ($setAvailInSoFar - $setAvailOutSoFar);
+
+        // 2) Compute current Received display on date (receivedRaw + netSetReceivedSoFar)
+        $receivedRaw = $sumMovements(
+            $product->stockMovements()->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])->where('type', 'received')
+        );
+        $setRecvInSoFar = $sumMovements(
+            $product->stockMovements()->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_in')
+                ->where('notes', 'like', '%[set:received]%')
+        );
+        $setRecvOutSoFar = $sumMovements(
+            $product->stockMovements()->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_out')
+                ->where('notes', 'like', '%[set:received]%')
+        );
+        $currentReceivedDisplay = $receivedRaw + ($setRecvInSoFar - $setRecvOutSoFar);
+
+        // Apply targets as minimal deltas so displays equal targets exactly
+        $createdAdjustment = false;
+        $notes = $validated['notes'] ?? null;
+
+        if (!empty($validated['available_stock_target'])) {
+            $target = StockHelper::parseCartonLineFormat($validated['available_stock_target'], $product->lines_per_carton);
+            $delta = $target - $currentAvailableDisplay;
+            if ($delta !== 0) {
+                $movement = StockMovement::create([
+                    'product_id' => $product->id,
+                    'type' => $delta > 0 ? 'adjustment_in' : 'adjustment_out',
+                    'quantity' => abs($delta),
+                    'notes' => trim('[set:available] ' . ($notes ?? '')),
+                ]);
+                // Set at start of day to affect baseline
+                $movement->created_at = $date . ' 00:00:00';
+                $movement->save();
+                $createdAdjustment = true;
+                // Update current display for any subsequent calculations in this request
+                $currentAvailableDisplay = $target;
+            }
         }
 
-        return back()->with('success', $message);
+        if (!empty($validated['received_today_target'])) {
+            $target = StockHelper::parseCartonLineFormat($validated['received_today_target'], $product->lines_per_carton);
+            $delta = $target - $currentReceivedDisplay;
+            if ($delta !== 0) {
+                $movement = StockMovement::create([
+                    'product_id' => $product->id,
+                    'type' => $delta > 0 ? 'adjustment_in' : 'adjustment_out',
+                    'quantity' => abs($delta),
+                    'notes' => trim('[set:received] ' . ($notes ?? '')),
+                ]);
+                // Mid-day so it's clearly on the date
+                $movement->created_at = $date . ' 12:00:00';
+                $movement->save();
+                $createdAdjustment = true;
+                $currentReceivedDisplay = $target;
+            }
+        }
+
+        if ($createdAdjustment) {
+            return back()->with('success', 'Stock adjusted successfully.');
+        }
+
+        return back()->with('info', 'No targets provided or no change required.');
     }
 
     public function dailyMovementReport(Request $request)
