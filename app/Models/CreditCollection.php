@@ -23,4 +23,4 @@ class CreditCollection extends Model
     {
         return $this->belongsTo(Customer::class);
     }
-} 
+}

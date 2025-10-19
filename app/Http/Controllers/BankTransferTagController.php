@@ -21,6 +21,7 @@ class BankTransferTagController extends Controller
     public function destroy(BankTransferTag $tag)
     {
         $tag->delete();
+
         return back()->with('success', 'Tag deleted successfully.');
     }
 }

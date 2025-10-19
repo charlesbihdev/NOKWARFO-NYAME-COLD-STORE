@@ -7,7 +7,6 @@ import AddTransactionModal from '../components/sales/AddTransactionmodal';
 import SalesTable from '../components/sales/salesTable';
 
 function SalesTransactions({ sales_transactions = [], products = [], customers = [] }) {
-
     const [open, setOpen] = useState(false);
     // Cart-style items state
     const [items, setItems] = useState([{ product_id: '', qty: '', unit_selling_price: '', total: '' }]);
@@ -18,13 +17,12 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
     const form = useForm({
         customer_id: '',
         customer_name: '',
+        transaction_date: new Date().toISOString().split('T')[0],
         items: items,
         amount_paid: '',
         due_date: '',
         payment_type: 'cash',
     });
-
-    
 
     // Update form items when items state changes
     useEffect(() => {
@@ -64,6 +62,7 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
         form.setData({
             customer_id: '',
             customer_name: '',
+            transaction_date: new Date().toISOString().split('T')[0],
             items: [{ product_id: '', qty: '', unit_selling_price: '', total: '' }],
             amount_paid: '',
             due_date: '',
@@ -78,6 +77,15 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
         setDueDate('');
         setPaymentType('cash');
         form.reset();
+        form.setData({
+            customer_id: '',
+            customer_name: '',
+            transaction_date: new Date().toISOString().split('T')[0],
+            items: [{ product_id: '', qty: '', unit_selling_price: '', total: '' }],
+            amount_paid: '',
+            due_date: '',
+            payment_type: 'cash',
+        });
     };
 
     const breadcrumbs = [{ title: 'Sales Transactions', href: '/sales-transactions' }];

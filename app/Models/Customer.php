@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
@@ -104,7 +104,6 @@ class Customer extends Model
         // Outstanding balance
         return max($totalDebt - $amountPaid, 0);
     }
-
 
     public function creditCollections()
     {

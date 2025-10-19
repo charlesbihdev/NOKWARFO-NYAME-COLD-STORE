@@ -2,14 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Product;
-use App\Models\Customer;
-use App\Models\Supplier;
 use App\Models\BankTransfer;
-use App\Models\DailyCollection;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Supplier;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use App\Models\CreditCollection;
 
 class DatabaseSeeder extends Seeder
 {

@@ -3,21 +3,16 @@ import { useState } from 'react';
 
 import AppLayout from '@/layouts/app-layout';
 import DateRangePicker from '../components/DateRangePicker';
+import BankTransferAnalytics from '../components/bank-transfer/BankTransferAnalytics';
 import BankTransferForm from '../components/bank-transfer/BankTransferForm';
 import BankTransfersTable from '../components/bank-transfer/BankTransfersTable';
 import DeleteConfirmDialog from '../components/bank-transfer/DeleteConfirmDialog';
 import TagCreationForm from '../components/bank-transfer/TagCreationForm';
 
-export default function BankTransfers({ 
-    bank_transfers = [], 
-    tags = [], 
-    last_balance = 0,
-    start_date = '',
-    end_date = ''
-}) {
+export default function BankTransfers({ bank_transfers = [], tags = [], last_balance = 0, start_date = '', end_date = '', analytics = null }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [deleteTransferId, setDeleteTransferId] = useState(null);
-    
+
     // Default to current month if no dates provided
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -71,6 +66,8 @@ export default function BankTransfers({
                 </div>
 
                 <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateChange} />
+
+                <BankTransferAnalytics analytics={analytics} />
 
                 <BankTransfersTable bankTransfers={bank_transfers} onDeleteClick={setDeleteTransferId} />
 

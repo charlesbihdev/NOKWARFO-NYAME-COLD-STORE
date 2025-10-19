@@ -81,7 +81,7 @@ class StockControlTest extends TestCase
 
         $adj = StockMovement::query()
             ->where('product_id', $product->id)
-            ->whereIn('type', ['adjustment_in','adjustment_out'])
+            ->whereIn('type', ['adjustment_in', 'adjustment_out'])
             ->latest('id')
             ->first();
 
@@ -106,7 +106,7 @@ class StockControlTest extends TestCase
             'quantity' => 3,
             'notes' => null,
         ]);
-        $rec->created_at = $date . ' 09:00:00';
+        $rec->created_at = $date.' 09:00:00';
         $rec->save();
 
         $response = $this->post(route('stock-control.adjust'), [
@@ -121,7 +121,7 @@ class StockControlTest extends TestCase
 
         $adj = StockMovement::query()
             ->where('product_id', $product->id)
-            ->whereIn('type', ['adjustment_in','adjustment_out'])
+            ->whereIn('type', ['adjustment_in', 'adjustment_out'])
             ->latest('id')
             ->first();
 
@@ -132,5 +132,3 @@ class StockControlTest extends TestCase
         $this->assertSame('12:00:00', $adj->created_at->format('H:i:s'));
     }
 }
-
-

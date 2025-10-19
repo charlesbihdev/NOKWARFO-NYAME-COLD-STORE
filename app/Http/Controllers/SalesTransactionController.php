@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Sale;
-use Inertia\Inertia;
-use App\Models\Product;
-use App\Models\Customer;
-use App\Models\SaleItem;
 use App\Helpers\StockHelper;
-use Illuminate\Http\Request;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\StockMovement;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
 
 class SalesTransactionController extends Controller
 {
@@ -78,13 +78,12 @@ class SalesTransactionController extends Controller
         ]);
     }
 
-
-
     public function store(Request $request)
     {
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'customer_name' => 'nullable|string|max:255',
+            'transaction_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|integer|min:1', // qty in lines (smallest unit)
@@ -94,7 +93,7 @@ class SalesTransactionController extends Controller
             'payment_type' => 'required|in:cash,credit,partial',
         ]);
 
-        if (!isset($validated['customer_id']) && empty($validated['customer_name'])) {
+        if (! isset($validated['customer_id']) && empty($validated['customer_name'])) {
             return redirect()->back()->withErrors(['customer_id' => 'Either customer ID or customer name must be provided.'])->withInput();
         }
 
@@ -164,7 +163,9 @@ class SalesTransactionController extends Controller
 
             $totalCost = 0;
             foreach ($stockMovements as $movement) {
-                if ($qtyNeeded <= 0) break;
+                if ($qtyNeeded <= 0) {
+                    break;
+                }
 
                 $qtyToUse = min($movement->quantity, $qtyNeeded);
                 $totalCost += $qtyToUse * $movement->unit_cost; // unit_cost is per line
@@ -205,7 +206,7 @@ class SalesTransactionController extends Controller
         }
 
         $saleData = [
-            'transaction_id' => 'TXN' . time(),
+            'transaction_id' => 'TXN'.time(),
             'customer_id' => $validated['customer_id'] ?? null,
             'customer_name' => $validated['customer_id'] ? null : $validated['customer_name'],
             'subtotal' => $subtotal,
@@ -218,6 +219,10 @@ class SalesTransactionController extends Controller
         ];
 
         $sale = Sale::create($saleData);
+
+        // Update the created_at to reflect the transaction date
+        $sale->created_at = $validated['transaction_date'];
+        $sale->save();
 
         foreach ($itemsWithCosts as $item) {
             SaleItem::create([
@@ -233,7 +238,6 @@ class SalesTransactionController extends Controller
 
         return redirect()->route('sales-transactions.index')->with('success', 'Sales transaction created successfully.');
     }
-
 
     public function destroy($transaction_id)
     {
@@ -252,6 +256,7 @@ class SalesTransactionController extends Controller
         // }
 
         $sale->delete();
+
         return redirect()->route('sales-transactions.index')->with('success', 'Sales transaction deleted successfully.');
     }
 }

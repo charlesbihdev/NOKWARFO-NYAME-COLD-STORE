@@ -19,4 +19,4 @@ class DailyCollection extends Model
     protected $casts = [
         'amount_collected' => 'decimal:2',
     ];
-} 
+}

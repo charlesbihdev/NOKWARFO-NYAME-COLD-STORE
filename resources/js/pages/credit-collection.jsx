@@ -2,7 +2,7 @@ import InputError from '@/components/InputError';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,25 +16,21 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-
     const filteredDebts = outstanding_debts.filter((debt) => debt.customer.toLowerCase().includes(searchQuery.toLowerCase()));
     const { data, setData, post, processing, errors, reset } = useForm({
         customer_id: '',
         amount_collected: '',
+        payment_date: new Date().toISOString().split('T')[0],
         notes: '',
     });
 
-
-
     const breadcrumbs = [{ title: 'Credit Collection', href: '/credit-collection' }];
 
-
-
     function handleCollect(debt) {
-
         setData({
             customer_id: debt.customer_id,
             amount_collected: '',
+            payment_date: new Date().toISOString().split('T')[0],
             notes: '',
         });
         setOpen(true);
@@ -90,7 +86,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                     {/* Credit Collections */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Amount Collected from Creditors Today</CardTitle>
+                            <CardTitle>Amount Collected from Creditors (Today's Payments)</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -98,6 +94,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                                     <TableRow>
                                         <TableHead>Customer Name</TableHead>
                                         <TableHead>Amount Collected</TableHead>
+                                        <TableHead>Payment Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -107,18 +104,18 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                                             <TableCell className="font-medium text-green-600">
                                                 GH₵{parseFloat(collection.amount_collected).toFixed(2)}
                                             </TableCell>
+                                            <TableCell className="text-gray-600">{collection.payment_date}</TableCell>
                                         </TableRow>
                                     ))}
                                     <TableRow className="bg-green-50">
                                         <TableCell className="font-bold">Total Collected</TableCell>
                                         <TableCell className="font-bold text-green-600">GH₵{totalCollected.toFixed(2)}</TableCell>
+                                        <TableCell></TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
                         </CardContent>
                     </Card>
-
-
                 </div>
 
                 {/* Outstanding Debts Table */}
@@ -163,7 +160,13 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                                             {debt.days_overdue} days
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={debt.days_overdue > 14 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-orange-600 text-white hover:bg-orange-700'}>
+                                            <Badge
+                                                className={
+                                                    debt.days_overdue > 14
+                                                        ? 'bg-red-600 text-white hover:bg-red-700'
+                                                        : 'bg-orange-600 text-white hover:bg-orange-700'
+                                                }
+                                            >
                                                 {debt.days_overdue > 14 ? 'Critical' : 'Overdue'}
                                             </Badge>
                                         </TableCell>
@@ -226,6 +229,22 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                                         required
                                     />
                                     {errors.amount_collected && <InputError message={errors.amount_collected} className="mt-2" />}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="payment_date" className="text-right">
+                                    Payment Date
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="payment_date"
+                                        type="date"
+                                        className="w-full"
+                                        value={data.payment_date}
+                                        onChange={(e) => setData('payment_date', e.target.value)}
+                                        required
+                                    />
+                                    {errors.payment_date && <InputError message={errors.payment_date} className="mt-2" />}
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
