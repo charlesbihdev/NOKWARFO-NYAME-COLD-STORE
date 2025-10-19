@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Supplier;
-use App\Models\Product;
-use App\Models\Customer;
 use App\Models\BankTransfer;
+use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Supplier;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class ColdStoreSeeder extends Seeder
 {
@@ -153,4 +153,4 @@ class ColdStoreSeeder extends Seeder
             );
         }
     }
-} 
+}

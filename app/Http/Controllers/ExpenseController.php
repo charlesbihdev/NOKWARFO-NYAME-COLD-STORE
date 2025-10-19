@@ -59,6 +59,7 @@ class ExpenseController extends Controller
 
         try {
             Expense::create($validated);
+
             return back()->with('success', 'Expense recorded successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to record expense. Please try again.'])->withInput();
@@ -77,6 +78,7 @@ class ExpenseController extends Controller
 
         try {
             $expense->update($validated);
+
             return back()->with('success', 'Expense updated successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to update expense. Please try again.'])->withInput();
@@ -87,6 +89,7 @@ class ExpenseController extends Controller
     {
         try {
             $expense->delete();
+
             return back()->with('success', 'Expense deleted successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to delete expense. Please try again.']);

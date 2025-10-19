@@ -142,6 +142,7 @@ class SupplierController extends Controller
             return back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
             \Log::error('Failed to create transaction: '.$e->getMessage());
+
             return back()->withErrors(['error' => 'Failed to create transaction: '.$e->getMessage()]);
         }
     }

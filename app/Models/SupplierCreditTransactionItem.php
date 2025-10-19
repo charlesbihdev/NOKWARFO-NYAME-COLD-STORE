@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SupplierCreditTransactionItem extends Model
 {
@@ -35,12 +35,12 @@ class SupplierCreditTransactionItem extends Model
     // Helper methods
     public function getFormattedUnitPriceAttribute(): string
     {
-        return 'GHC ' . number_format($this->unit_price, 2);
+        return 'GHC '.number_format($this->unit_price, 2);
     }
 
     public function getFormattedTotalAmountAttribute(): string
     {
-        return 'GHC ' . number_format($this->total_amount, 2);
+        return 'GHC '.number_format($this->total_amount, 2);
     }
 
     // Auto-calculate total amount when unit price or quantity changes

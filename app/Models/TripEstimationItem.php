@@ -42,7 +42,7 @@ class TripEstimationItem extends Model
         $this->total_cost_price = $this->quantity * $this->unit_cost_price;
         $this->total_selling_price = $this->quantity * $this->unit_selling_price;
         $this->profit_per_item = $this->total_selling_price - $this->total_cost_price;
-        
+
         return $this;
     }
 }

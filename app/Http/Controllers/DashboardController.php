@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use App\Models\Sale;
-use Inertia\Inertia;
-use App\Models\Product;
 use App\Models\Customer;
+use App\Models\Product;
+use App\Models\Sale;
 use App\Models\SaleItem;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -62,15 +62,15 @@ class DashboardController extends Controller
                     ->sum('quantity');
 
                 $cashSales = $product->saleItems()
-                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'cash'))
+                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'cash'))
                     ->sum('quantity');
 
                 $creditSales = $product->saleItems()
-                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'credit'))
+                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'credit'))
                     ->sum('quantity');
 
                 $partialSales = $product->saleItems()
-                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'partial'))
+                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'partial'))
                     ->sum('quantity');
 
                 $available = $incoming - ($sold + $cashSales + $creditSales + $partialSales);

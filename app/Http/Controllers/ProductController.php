@@ -38,7 +38,6 @@ class ProductController extends Controller
         ]);
     }
 
-
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
@@ -56,10 +55,10 @@ class ProductController extends Controller
         ]);
     }
 
-
     public function destroy(Product $product)
     {
         $product->delete();
+
         return back()->with([
             'success' => 'Product deleted successfully',
         ]);

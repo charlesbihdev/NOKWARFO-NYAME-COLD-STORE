@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\BankTransfer;
-use Illuminate\Http\Request;
 use App\Models\BankTransferTag;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class BankTransferController extends Controller
 {
@@ -19,13 +19,13 @@ class BankTransferController extends Controller
         $today = now()->toDateString();
 
         // Default to current month if no dates provided
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             $now = now();
             $startDate = $now->startOfMonth()->format('Y-m-d');
             $endDate = $now->endOfMonth()->format('Y-m-d');
-        } elseif ($startDate && !$endDate) {
+        } elseif ($startDate && ! $endDate) {
             $endDate = $startDate;
-        } elseif (!$startDate && $endDate) {
+        } elseif (! $startDate && $endDate) {
             $startDate = $endDate;
         }
 
@@ -100,10 +100,10 @@ class BankTransferController extends Controller
         return redirect()->route('bank-transfers.index')->with('success', 'Bank transfer recorded successfully.');
     }
 
-
     public function destroy(BankTransfer $bankTransfer)
     {
         $bankTransfer->delete();
+
         return redirect()->route('bank-transfers.index')->with('success', 'Bank transfer deleted successfully.');
     }
 }

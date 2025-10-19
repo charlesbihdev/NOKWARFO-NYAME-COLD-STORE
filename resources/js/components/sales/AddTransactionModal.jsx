@@ -148,6 +148,19 @@ export default function AddTransactionModal({
                 >
                     <div>
                         <label className="mb-1 block font-medium">
+                            Transaction Date
+                            <Input
+                                type="date"
+                                value={form.data.transaction_date}
+                                onChange={(e) => form.setData('transaction_date', e.target.value)}
+                                required
+                            />
+                        </label>
+                        {form.errors.transaction_date && <div className="mt-1 text-xs text-red-500">{form.errors.transaction_date}</div>}
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block font-medium">
                             Customer
                             <div className="flex gap-2">
                                 <Select

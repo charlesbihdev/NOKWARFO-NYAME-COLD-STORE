@@ -18,13 +18,13 @@ class TripEstimationController extends Controller
         $endDate = $request->input('end_date');
 
         // Default to current month if no dates provided
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             $now = now();
             $startDate = $now->startOfMonth()->format('Y-m-d');
             $endDate = $now->endOfMonth()->format('Y-m-d');
-        } elseif ($startDate && !$endDate) {
+        } elseif ($startDate && ! $endDate) {
             $endDate = $startDate;
-        } elseif (!$startDate && $endDate) {
+        } elseif (! $startDate && $endDate) {
             $startDate = $endDate;
         }
 
@@ -72,7 +72,7 @@ class TripEstimationController extends Controller
         // Calculate overview totals for the filtered period
         $overviewQuery = TripEstimation::whereDate('trip_date', '>=', $startDate)
             ->whereDate('trip_date', '<=', $endDate);
-        
+
         $overview = [
             'total_selling_price' => $overviewQuery->sum('total_selling_price'),
             'total_cost_price' => $overviewQuery->sum('total_cost_price'),
@@ -142,7 +142,7 @@ class TripEstimationController extends Controller
                     'unit_cost_price' => $itemData['unit_cost_price'],
                     'unit_selling_price' => $itemData['unit_selling_price'],
                 ]);
-                
+
                 // Calculate totals
                 $item->calculateTotals();
                 $trip->items()->save($item);
@@ -195,7 +195,7 @@ class TripEstimationController extends Controller
                     'unit_cost_price' => $itemData['unit_cost_price'],
                     'unit_selling_price' => $itemData['unit_selling_price'],
                 ]);
-                
+
                 // Calculate totals
                 $item->calculateTotals();
                 $tripEstimation->items()->save($item);
@@ -211,6 +211,7 @@ class TripEstimationController extends Controller
     public function destroy(TripEstimation $tripEstimation)
     {
         $tripEstimation->delete();
+
         return back()->with('success', 'Trip estimation deleted successfully');
     }
 }

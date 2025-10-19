@@ -11,7 +11,7 @@ class DailyCollectionsController extends Controller
     public function index()
     {
         $daily_collections = DailyCollection::orderByDesc('created_at')->get();
-        
+
         return Inertia::render('daily-collections', [
             'daily_collections' => $daily_collections,
         ]);
@@ -34,6 +34,7 @@ class DailyCollectionsController extends Controller
     public function destroy(DailyCollection $dailyCollection)
     {
         $dailyCollection->delete();
+
         return redirect()->route('daily-collections.index')->with('success', 'Daily collection deleted successfully.');
     }
-} 
+}
