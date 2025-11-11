@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use App\Models\Supplier;
-use App\Models\SupplierCreditTransaction;
+use Illuminate\Http\Request;
 use App\Models\SupplierPayment;
 use App\Services\SupplierCreditService;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Models\SupplierCreditTransaction;
 
 class SupplierController extends Controller
 {
@@ -77,7 +78,7 @@ class SupplierController extends Controller
         // Check if supplier has outstanding debt
         if ($supplier->has_outstanding_debt) {
             return back()->withErrors([
-                'error' => 'Cannot delete supplier with outstanding debt. Current balance: '.$supplier->formatted_total_outstanding,
+                'error' => 'Cannot delete supplier with outstanding debt. Current balance: ' . $supplier->formatted_total_outstanding,
             ]);
         }
 
@@ -141,9 +142,9 @@ class SupplierController extends Controller
 
             return back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
-            \Log::error('Failed to create transaction: '.$e->getMessage());
+            Log::error('Failed to create transaction: ' . $e->getMessage());
 
-            return back()->withErrors(['error' => 'Failed to create transaction: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
         }
     }
 
@@ -215,9 +216,9 @@ class SupplierController extends Controller
             });
 
             // Auto-generate description from items
-            $description = 'Credit purchase: '.collect($validated['items'])
+            $description = 'Credit purchase: ' . collect($validated['items'])
                 ->map(function ($item) {
-                    return $item['product_name'].' (Qty: '.$item['quantity'].')';
+                    return $item['product_name'] . ' (Qty: ' . $item['quantity'] . ')';
                 })
                 ->join(', ');
 
@@ -263,9 +264,11 @@ class SupplierController extends Controller
             $query->whereBetween('transaction_date', [$startDate, $endDate]);
         }
 
-        // Order and paginate
+        // Order and paginate - use transaction_date DESC to show newest first, created_at as tie-breaker
+        // Calculations remain correct as they're based on date comparisons, not query order
         $transactions = $query
-            ->orderBy('created_at')
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('created_at')
             ->paginate(20)
             ->through(function ($transaction) use ($startDate, $endDate) {
                 return $this->creditService->getTransactionSummary($transaction, $startDate, $endDate);
@@ -282,7 +285,9 @@ class SupplierController extends Controller
         if ($startDate && $endDate) {
             $paymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
         }
-        $payments = $paymentsQuery->orderBy('created_at')->get()
+        // Order by payment_date DESC to show newest first, created_at as tie-breaker
+        // Calculations remain correct as they're based on date comparisons, not query order
+        $payments = $paymentsQuery->orderByDesc('payment_date')->orderByDesc('created_at')->get()
             ->map(function ($payment) use ($startDate, $endDate) {
                 return $this->creditService->getPaymentSummary($payment, $startDate, $endDate);
             });
