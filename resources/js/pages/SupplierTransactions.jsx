@@ -21,11 +21,11 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
             end: endOfMonth.toISOString().slice(0, 10),
         };
     };
-
+    
     const { start: defaultStartDate, end: defaultEndDate } = getCurrentMonthRange();
     const [startDate, setStartDate] = useState(start_date || defaultStartDate);
     const [endDate, setEndDate] = useState(end_date || defaultEndDate);
-
+    
     // Payment modal states
 
     const [showEditPaymentModal, setShowEditPaymentModal] = useState(false);
@@ -154,22 +154,22 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
 
                 {/* Financial Summary Cards */}
                 <div className="space-y-4">
-                    {/* Filter Status */}
+                                    {/* Filter Status */}
                     {start_date && end_date && (
                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                            <p className="text-sm text-blue-700">
+                        <p className="text-sm text-blue-700">
                                 📅 Showing data for: <span className="font-medium">{formatDateDisplay(parseLocalDate(start_date))}</span> to{' '}
                                 <span className="font-medium">{formatDateDisplay(parseLocalDate(end_date))}</span>
-                            </p>
-                        </div>
-                    )}
-
+                        </p>
+                    </div>
+                )}
+                    
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center space-x-2">
-                                    <Users className="h-5 w-5 text-blue-500" />
-                                    <div>
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center space-x-2">
+                                <Users className="h-5 w-5 text-blue-500" />
+                                <div>
                                         <p className="text-sm text-gray-600">
                                             {start_date && end_date ? 'Filtered Transactions' : 'Total Transactions'}
                                         </p>
@@ -178,7 +178,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                 </div>
                             </CardContent>
                         </Card>
-
+                        
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center space-x-2">
@@ -190,7 +190,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                 </div>
                             </CardContent>
                         </Card>
-
+                        
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center space-x-2">
@@ -198,11 +198,11 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     <div>
                                         <p className="text-sm text-gray-600">{start_date && end_date ? 'Filtered Payments' : 'Total Payments'}</p>
                                         <p className="text-2xl font-bold text-green-600">{formatCurrency(supplier.total_payments_made || 0)}</p>
-                                    </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-
+                            </div>
+                        </CardContent>
+                    </Card>
+                        
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center space-x-2">
@@ -257,21 +257,21 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     Date Range <span className="text-xs text-gray-500">(Default: Current Month)</span>
                                 </Label>
                                 <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateChange} />
-                            </div>
+                                </div>
 
-                            {/* Results Count */}
-                            <div className="text-sm text-gray-600">
-                                Showing {(transactions.data?.length || 0) + (payments?.length || 0)} timeline items (transactions + payments)
+                                {/* Results Count */}
+                                <div className="text-sm text-gray-600">
+                                    Showing {(transactions.data?.length || 0) + (payments?.length || 0)} timeline items (transactions + payments)
                             </div>
                         </div>
 
-                        {/* Unified Timeline - Transactions and Payments Mixed */}
+                                                {/* Unified Timeline - Transactions and Payments Mixed */}
                         <div className="space-y-4">
                             {/* Timeline Items */}
                             {(() => {
                                 // Combine transactions and payments into a unified timeline
                                 const timelineItems = [];
-
+                                
                                 // Add transactions with type identifier
                                 transactions.data.forEach((transaction) => {
                                     timelineItems.push({
@@ -282,7 +282,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                         sortCreatedAt: new Date(transaction.created_at),
                                     });
                                 });
-
+                                
                                 // Add only standalone payments (not linked to transactions)
                                 payments.forEach((payment) => {
                                     // Check if this payment is linked to any transaction
@@ -293,10 +293,10 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                         const timeDiff = Math.abs(paymentTime - transactionTime);
                                         const isSameTime = timeDiff < 60000; // Within 1 minute
                                         const isSameAmount = parseFloat(payment.payment_amount) === parseFloat(transaction.todays_payments || 0);
-
+                                        
                                         return isSameTime && isSameAmount && transaction.todays_payments > 0;
                                     });
-
+                                    
                                     // Only add standalone payments
                                     if (!isLinkedToTransaction) {
                                         timelineItems.push({
@@ -308,7 +308,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                         });
                                     }
                                 });
-
+                                
                                 // Sort by date DESC first, then by created_at DESC as tie-breaker (newest first)
                                 // Backend already sends data in DESC order, but we need to sort combined timeline
                                 timelineItems.sort((a, b) => {
@@ -319,7 +319,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     // If dates are equal, use created_at DESC as tie-breaker
                                     return b.sortCreatedAt - a.sortCreatedAt;
                                 });
-
+                                
                                 return timelineItems.map((item, index) => {
                                     if (item.type === 'transaction') {
                                         return (
@@ -335,14 +335,14 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                 )}
                                                             </h3>
                                                         </div>
-
+                                                        
                                                         {item.outstanding_balance > 0 && (
                                                             <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
                                                                 Outstanding: {formatCurrency(item.outstanding_balance)}
                                                             </span>
                                                         )}
                                                     </div>
-
+                                                    
                                                     <div className="flex gap-2">
                                                         <Button
                                                             size="sm"
@@ -409,7 +409,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                 {/* Financial Summary Card */}
                                                 <div className="space-y-3 rounded-lg bg-gray-50 p-4">
                                                     <h4 className="text-sm font-semibold text-gray-700">Financial Summary</h4>
-
+                                                    
                                                     <div className="grid grid-cols-2 gap-4 text-xs">
                                                         <div className="space-y-2">
                                                             <div className="flex justify-between">
@@ -429,7 +429,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                 </span>
                                                             </div>
                                                         </div>
-
+                                                        
                                                         <div className="space-y-2">
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">Current Payment:</span>
@@ -445,7 +445,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                             </div>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div className="border-t pt-2 text-xs text-gray-500 italic">
                                                         <span className="font-medium">Flow:</span> Previous debt (
                                                         {formatCurrency(item.previous_debt || 0)}) + New transaction (
@@ -487,7 +487,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                             </h3>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div className="flex gap-2">
                                                         <Button
                                                             size="sm"
@@ -528,7 +528,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                 {/* Payment Financial Summary */}
                                                 <div className="space-y-3 rounded-lg bg-green-50 p-4">
                                                     <h4 className="text-sm font-semibold text-green-700">Payment Summary</h4>
-
+                                                    
                                                     <div className="grid grid-cols-2 gap-4 text-xs">
                                                         <div className="space-y-2">
                                                             <div className="flex justify-between">
@@ -544,7 +544,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                 </span>
                                                             </div>
                                                         </div>
-
+                                                        
                                                         <div className="space-y-2">
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">Outstanding Balance:</span>
@@ -558,13 +558,13 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                             </div>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div className="border-t pt-2 text-xs text-gray-500 italic">
                                                         <span className="font-medium">Flow:</span> Previous debt (
                                                         {formatCurrency(item.previous_debt || 0)}) - Payment ({formatCurrency(item.payment_amount)}) =
                                                         Outstanding ({formatCurrency(item.outstanding_balance || 0)})
                                                     </div>
-
+                                                    
                                                     {item.notes && (
                                                         <div className="border-t pt-2 text-xs text-gray-600">
                                                             <span className="font-medium">Notes:</span> {item.notes}
@@ -589,32 +589,32 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                         {/* Simple Pagination */}
                         {(transactions.prev_page_url || transactions.next_page_url) && (
                             <div className="mt-6 flex items-center justify-center gap-4">
-                                {/* Previous Page */}
+                                    {/* Previous Page */}
                                 {transactions.prev_page_url ? (
                                     <Link
                                         href={transactions.prev_page_url}
                                         preserveState
                                         preserveScroll
                                         className="rounded border bg-white px-3 py-1 hover:bg-gray-100"
-                                    >
-                                        Previous
+                                        >
+                                            Previous
                                     </Link>
                                 ) : (
                                     <span className="cursor-not-allowed rounded border bg-gray-200 px-3 py-1">Previous</span>
                                 )}
-
+                                
                                 {/* Page Info */}
                                 <span className="rounded border px-3 py-1">{transactions.current_page}</span>
 
-                                {/* Next Page */}
+                                    {/* Next Page */}
                                 {transactions.next_page_url ? (
                                     <Link
                                         href={transactions.next_page_url}
                                         preserveState
                                         preserveScroll
                                         className="rounded border bg-white px-3 py-1 hover:bg-gray-100"
-                                    >
-                                        Next
+                                        >
+                                            Next
                                     </Link>
                                 ) : (
                                     <span className="cursor-not-allowed rounded border bg-gray-200 px-3 py-1">Next</span>
@@ -632,24 +632,24 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                         <h3 className="mb-4 text-lg font-semibold">Edit Payment</h3>
                         <form
                             onSubmit={(e) => {
-                                e.preventDefault();
-                                const formData = new FormData(e.target);
+                            e.preventDefault();
+                            const formData = new FormData(e.target);
                                 router.put(
                                     route('suppliers.update-payment', editingPayment.id),
                                     {
-                                        payment_date: formData.get('payment_date'),
-                                        payment_amount: formData.get('payment_amount'),
-                                        payment_method: formData.get('payment_method'),
-                                        notes: formData.get('notes'),
+                                payment_date: formData.get('payment_date'),
+                                payment_amount: formData.get('payment_amount'),
+                                payment_method: formData.get('payment_method'),
+                                notes: formData.get('notes'),
                                     },
                                     {
-                                        onSuccess: () => {
-                                            setShowEditPaymentModal(false);
-                                            setEditingPayment(null);
-                                        },
-                                        preserveScroll: true,
-                                        preserveState: true,
-                                        only: ['supplier', 'transactions', 'payments', 'flash'],
+                                onSuccess: () => {
+                                    setShowEditPaymentModal(false);
+                                    setEditingPayment(null);
+                                },
+                                preserveScroll: true,
+                                preserveState: true,
+                                only: ['supplier', 'transactions', 'payments', 'flash'],
                                     },
                                 );
                             }}
