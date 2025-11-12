@@ -118,12 +118,20 @@ class SupplierCreditService
 
     /**
      * Calculate debt before this specific transaction
+     * Uses transaction_date/payment_date for chronological ordering (with created_at as tie-breaker)
      */
     private function calculatePreviousDebt(SupplierCreditTransaction $transaction, ?string $startDate = null, ?string $endDate = null): float
     {
-        // Get total debt from transactions created before this one
+        // Get total debt from transactions that occurred before this transaction
+        // Compare by transaction_date first, then created_at if dates are equal
         $debtQuery = $transaction->supplier->creditTransactions()
+            ->where(function ($query) use ($transaction) {
+                $query->where('transaction_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('transaction_date', '=', $transaction->transaction_date)
             ->where('created_at', '<', $transaction->created_at);
+                    });
+            });
 
         // Apply date filter if provided
         if ($startDate && $endDate) {
@@ -132,9 +140,16 @@ class SupplierCreditService
 
         $totalPreviousDebt = $debtQuery->sum('amount_owed');
 
-        // Get total payments made before this transaction
+        // Get total payments made before this transaction date
+        // Compare by payment_date first, then created_at if dates are equal
         $paymentsQuery = $transaction->supplier->payments()
+            ->where(function ($query) use ($transaction) {
+                $query->where('payment_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('payment_date', '=', $transaction->transaction_date)
             ->where('created_at', '<', $transaction->created_at);
+                    });
+            });
 
         // Apply date filter if provided
         if ($startDate && $endDate) {
@@ -161,16 +176,31 @@ class SupplierCreditService
 
     /**
      * Calculate outstanding balance up to this transaction date
+     * Uses transaction_date/payment_date for chronological ordering (with created_at as tie-breaker)
      */
     private function calculateOutstandingBalance(SupplierCreditTransaction $transaction, ?string $startDate = null, ?string $endDate = null): float
     {
-        // Get total debt up to this transaction timestamp
+        // Get total debt up to and including this transaction
+        // Compare by transaction_date first, then created_at if dates are equal
         $debtQuery = $transaction->supplier->creditTransactions()
+            ->where(function ($query) use ($transaction) {
+                $query->where('transaction_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('transaction_date', '=', $transaction->transaction_date)
             ->where('created_at', '<=', $transaction->created_at);
+                    });
+            });
 
-        // Get total payments up to this transaction timestamp
+        // Get total payments up to and including this transaction date
+        // Compare by payment_date first, then created_at if dates are equal
         $paymentsQuery = $transaction->supplier->payments()
+            ->where(function ($query) use ($transaction) {
+                $query->where('payment_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('payment_date', '=', $transaction->transaction_date)
             ->where('created_at', '<=', $transaction->created_at);
+                    });
+            });
 
         // Apply date filter if provided
         if ($startDate && $endDate) {
@@ -329,12 +359,20 @@ class SupplierCreditService
 
     /**
      * Calculate debt before a specific payment
+     * Uses transaction_date/payment_date for chronological ordering (with created_at as tie-breaker)
      */
     private function calculateDebtBeforePayment(SupplierPayment $payment, ?string $startDate = null, ?string $endDate = null): float
     {
-        // Get total debt up to this payment date
+        // Get total debt up to and including this payment date
+        // Compare by transaction_date first, then created_at if dates are equal
         $debtQuery = $payment->supplier->creditTransactions()
-            ->where('transaction_date', '<=', $payment->payment_date);
+            ->where(function ($query) use ($payment) {
+                $query->where('transaction_date', '<', $payment->payment_date)
+                    ->orWhere(function ($q) use ($payment) {
+                        $q->where('transaction_date', '=', $payment->payment_date)
+                            ->where('created_at', '<=', $payment->created_at);
+                    });
+            });
 
         // Apply date filter if provided
         if ($startDate && $endDate) {
@@ -343,9 +381,16 @@ class SupplierCreditService
 
         $totalDebt = $debtQuery->sum('amount_owed');
 
-        // Get payments made BEFORE this payment using created_at timestamp for proper chronological order
+        // Get payments made BEFORE this payment
+        // Compare by payment_date first, then created_at if dates are equal
         $previousPaymentsQuery = $payment->supplier->payments()
+            ->where(function ($query) use ($payment) {
+                $query->where('payment_date', '<', $payment->payment_date)
+                    ->orWhere(function ($q) use ($payment) {
+                        $q->where('payment_date', '=', $payment->payment_date)
             ->where('created_at', '<', $payment->created_at);
+                    });
+            });
 
         if ($startDate && $endDate) {
             $previousPaymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
