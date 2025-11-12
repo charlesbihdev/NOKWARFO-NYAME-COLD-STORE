@@ -129,7 +129,7 @@ class SupplierCreditService
                 $query->where('transaction_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('transaction_date', '=', $transaction->transaction_date)
-                            ->where('created_at', '<', $transaction->created_at);
+            ->where('created_at', '<', $transaction->created_at);
                     });
             });
 
@@ -147,7 +147,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('payment_date', '=', $transaction->transaction_date)
-                            ->where('created_at', '<', $transaction->created_at);
+            ->where('created_at', '<', $transaction->created_at);
                     });
             });
 
@@ -187,7 +187,7 @@ class SupplierCreditService
                 $query->where('transaction_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('transaction_date', '=', $transaction->transaction_date)
-                            ->where('created_at', '<=', $transaction->created_at);
+            ->where('created_at', '<=', $transaction->created_at);
                     });
             });
 
@@ -198,7 +198,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('payment_date', '=', $transaction->transaction_date)
-                            ->where('created_at', '<=', $transaction->created_at);
+            ->where('created_at', '<=', $transaction->created_at);
                     });
             });
 
@@ -388,7 +388,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $payment->payment_date)
                     ->orWhere(function ($q) use ($payment) {
                         $q->where('payment_date', '=', $payment->payment_date)
-                            ->where('created_at', '<', $payment->created_at);
+            ->where('created_at', '<', $payment->created_at);
                     });
             });
 
