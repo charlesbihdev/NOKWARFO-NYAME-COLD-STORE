@@ -102,43 +102,290 @@ class SalesTransactionController extends Controller
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
         // Validate stock availability and prepare unit_selling_price per line
+        // Following the stock adjustment logic from STOCK_ADJUSTMENT_LOGIC.md
+        $transactionDate = $validated['transaction_date'];
+
         foreach ($validated['items'] as &$item) {
             $product = $products[$item['product_id']];
             $linesPerCarton = $product->lines_per_carton ?? 1;
 
-            // Check available stock (lines)
-            $incoming = $product->stockMovements()
-                ->where('type', 'received')
-                ->sum('quantity');
-
-            $sold = $product->stockMovements()
-                ->where('type', 'sold')
-                ->sum('quantity');
-
-            $cashSales = $product->saleItems()
-                ->whereHas('sale', function ($q) {
-                    $q->where('payment_type', 'cash');
+            // Calculate available stock using adjustment-aware logic (same as StockControlController)
+            // Step 1: Check if there's a [set:available] adjustment on the transaction date
+            $lastSetAvailable = $product->stockMovements()
+                ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                ->where(function ($q) {
+                    $q->where('type', 'adjustment_in')
+                        ->orWhere('type', 'adjustment_out');
                 })
-                ->sum('quantity');
+                ->where('notes', 'like', '%[set:available]%')
+                ->orderByDesc('created_at')
+                ->first();
 
-            $creditSales = $product->saleItems()
-                ->whereHas('sale', function ($q) {
-                    $q->where('payment_type', 'credit');
-                })
-                ->sum('quantity');
+            $lastAdjustmentTimestamp = $lastSetAvailable ? $lastSetAvailable->created_at : null;
+            $hasSetAvailable = $lastSetAvailable !== null;
 
-            $partialSales = $product->saleItems()
-                ->whereHas('sale', function ($q) {
-                    $q->where('payment_type', 'partial');
-                })
-                ->sum('quantity');
+            if ($hasSetAvailable) {
+                // Scenario A: Adjustment exists - use adjustment logic
+                // Calculate baseline before date (excluding [set:available] tags)
+                $receivedBefore = $product->stockMovements()
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
+                    ->where('type', 'received')
+                    ->sum('quantity');
 
-            $totalSales = $cashSales + $creditSales + $partialSales;
-            $availableStock = $incoming - ($sold + $totalSales);
+                $adjustmentsInBefore = $product->stockMovements()
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
+                    ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere('notes', 'not like', '%[set:available]%');
+                    })
+                    ->sum('quantity');
 
-            if ($availableStock < $item['qty']) {
+                $adjustmentsOutBefore = $product->stockMovements()
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
+                    ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere('notes', 'not like', '%[set:available]%');
+                    })
+                    ->sum('quantity');
+
+                $baselineWithoutSet = $receivedBefore + $adjustmentsInBefore - $adjustmentsOutBefore;
+
+                // Get [set:available] adjustment value
+                $setAvailableIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:available]%')
+                    ->sum('quantity');
+
+                $setAvailableOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:available]%')
+                    ->sum('quantity');
+
+                $availableStock = $baselineWithoutSet + ($setAvailableIn - $setAvailableOut);
+
+                // Add stock received on transaction date (only AFTER adjustment)
+                $stockReceivedAfter = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'received')
+                    ->where('created_at', '>', $lastAdjustmentTimestamp)
+                    ->sum('quantity');
+
+                // Add [set:received] adjustments
+                $setReceivedIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $setReceivedOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $stockReceivedDisplay = $stockReceivedAfter + ($setReceivedIn - $setReceivedOut);
+
+                // Add normal adjustments on transaction date (only AFTER adjustment)
+                $adjustmentsInToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('created_at', '>', $lastAdjustmentTimestamp)
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                $adjustmentsOutToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('created_at', '>', $lastAdjustmentTimestamp)
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                // Subtract sales on transaction date (only AFTER adjustment)
+                $salesAfterAdjustment = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($transactionDate, $lastAdjustmentTimestamp) {
+                        $q->whereDate('created_at', $transactionDate)
+                            ->where('created_at', '>', $lastAdjustmentTimestamp);
+                    })
+                    ->sum('quantity');
+
+                $totalAvailable = $availableStock + $stockReceivedDisplay + $adjustmentsInToday - $adjustmentsOutToday - $salesAfterAdjustment;
+            } else {
+                // Scenario B: No adjustment - use previous day's remaining stock
+                $previousDate = now()->parse($transactionDate)->subDay()->toDateString();
+
+                // Calculate previous day's baseline (without [set:available])
+                $receivedBeforePrevious = $product->stockMovements()
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
+                    ->where('type', 'received')
+                    ->sum('quantity');
+
+                $adjustmentsInBeforePrevious = $product->stockMovements()
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
+                    ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere('notes', 'not like', '%[set:available]%');
+                    })
+                    ->sum('quantity');
+
+                $adjustmentsOutBeforePrevious = $product->stockMovements()
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
+                    ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere('notes', 'not like', '%[set:available]%');
+                    })
+                    ->sum('quantity');
+
+                $baselineBeforePrevious = $receivedBeforePrevious + $adjustmentsInBeforePrevious - $adjustmentsOutBeforePrevious;
+
+                // Previous day's [set:available] adjustments
+                $previousDaySetAvailableIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:available]%')
+                    ->sum('quantity');
+
+                $previousDaySetAvailableOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:available]%')
+                    ->sum('quantity');
+
+                $previousDayAvailableStock = $baselineBeforePrevious + ($previousDaySetAvailableIn - $previousDaySetAvailableOut);
+
+                // Previous day's Stock Received
+                $previousDayReceived = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'received')
+                    ->sum('quantity');
+
+                $previousDaySetReceivedIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $previousDaySetReceivedOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $previousDayStockReceived = $previousDayReceived + ($previousDaySetReceivedIn - $previousDaySetReceivedOut);
+
+                // Previous day's regular adjustments
+                $previousDayAdjustmentsIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                $previousDayAdjustmentsOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                $previousDayTotalAvailable = $previousDayAvailableStock + $previousDayStockReceived + $previousDayAdjustmentsIn - $previousDayAdjustmentsOut;
+
+                // Previous day's sales
+                $previousDaySales = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($previousDate) {
+                        $q->whereDate('created_at', $previousDate);
+                    })
+                    ->sum('quantity');
+
+                $availableStock = $previousDayTotalAvailable - $previousDaySales;
+
+                // Add today's movements
+                $stockReceivedToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'received')
+                    ->sum('quantity');
+
+                $setReceivedIn = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $setReceivedOut = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where('notes', 'like', '%[set:received]%')
+                    ->sum('quantity');
+
+                $stockReceivedDisplay = $stockReceivedToday + ($setReceivedIn - $setReceivedOut);
+
+                $adjustmentsInToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_in')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                $adjustmentsOutToday = $product->stockMovements()
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
+                    ->where('type', 'adjustment_out')
+                    ->where(function ($q) {
+                        $q->whereNull('notes')
+                            ->orWhere(function ($q2) {
+                                $q2->where('notes', 'not like', '%[set:available]%')
+                                    ->where('notes', 'not like', '%[set:received]%');
+                            });
+                    })
+                    ->sum('quantity');
+
+                // Subtract today's sales
+                $salesToday = $product->saleItems()
+                    ->whereHas('sale', function ($q) use ($transactionDate) {
+                        $q->whereDate('created_at', $transactionDate);
+                    })
+                    ->sum('quantity');
+
+                $totalAvailable = $availableStock + $stockReceivedDisplay + $adjustmentsInToday - $adjustmentsOutToday - $salesToday;
+            }
+
+            // Check if sufficient stock is available
+            if ($totalAvailable < $item['qty']) {
+                $availableFormatted = StockHelper::formatCartonLine($totalAvailable, $linesPerCarton);
+                $requestedFormatted = StockHelper::formatCartonLine($item['qty'], $linesPerCarton);
                 return redirect()->back()->withErrors([
-                    'items' => "Insufficient stock for product '{$product->name}'. Available: {$availableStock}, Requested: {$item['qty']}",
+                    'items' => "Insufficient stock for product '{$product->name}'. Available: {$availableFormatted}, Requested: {$requestedFormatted}",
                 ])->withInput();
             }
 
@@ -220,8 +467,11 @@ class SalesTransactionController extends Controller
 
         $sale = Sale::create($saleData);
 
-        // Update the created_at to reflect the transaction date
-        $sale->created_at = $validated['transaction_date'];
+        // Update the created_at to reflect the transaction date with current time
+        // This ensures sales have unique timestamps and can be filtered correctly
+        // when stock adjustments are made (sales after adjustment should count)
+        $transactionDateTime = $validated['transaction_date'] . ' ' . now()->format('H:i:s');
+        $sale->created_at = $transactionDateTime;
         $sale->save();
 
         foreach ($itemsWithCosts as $item) {
