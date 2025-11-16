@@ -59,13 +59,77 @@ class BankTransferController extends Controller
 
         $lastBalance = BankTransfer::latest()->value('current_balance') ?? 0;
 
+        // Calculate useful statistics for the selected period
+        $statistics = $this->calculateStatistics($startDate, $endDate, $today);
+
         return Inertia::render('bank-transfers', [
             'bank_transfers' => $bank_transfers,
             'tags' => $tags,
             'last_balance' => $lastBalance,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'statistics' => $statistics,
         ]);
+    }
+
+    private function calculateStatistics($startDate, $endDate, $today)
+    {
+        // Get transfers for selected period
+        $periodTransfers = BankTransfer::whereDate('date', '>=', $startDate)
+            ->whereDate('date', '<=', $endDate)
+            ->get();
+
+        // Get today's transfers only
+        $todayTransfers = BankTransfer::whereDate('date', $today)->get();
+
+        // 1. Total Credit (Money IN) for selected period
+        $totalCredit = $periodTransfers->sum('credit');
+
+        // 2. Total Debit (Money OUT) for selected period
+        $totalDebit = $periodTransfers->sum('debit');
+
+        // 3. Net Flow (Profit/Loss) = Credit - Debit
+        $netFlow = $totalCredit - $totalDebit;
+
+        // 4. Today's Credit (Money IN today)
+        $todayCredit = $todayTransfers->sum('credit');
+
+        // 5. Today's Debit (Money OUT today)
+        $todayDebit = $todayTransfers->sum('debit');
+
+        // 6. Today's transaction count
+        $todayCount = $todayTransfers->count();
+
+        // 7. Breakdown by tags (for selected period)
+        $tagBreakdown = BankTransfer::with('tag')
+            ->whereDate('date', '>=', $startDate)
+            ->whereDate('date', '<=', $endDate)
+            ->whereNotNull('tag_id')
+            ->get()
+            ->groupBy('tag_id')
+            ->map(function ($transfers) {
+                $tag = $transfers->first()->tag;
+
+                return [
+                    'tag_name' => $tag ? $tag->name : 'No Tag',
+                    'total_credit' => $transfers->sum('credit'),
+                    'total_debit' => $transfers->sum('debit'),
+                    'transaction_count' => $transfers->count(),
+                    'net_amount' => $transfers->sum('credit') - $transfers->sum('debit'),
+                ];
+            })
+            ->sortByDesc('total_debit')
+            ->values();
+
+        return [
+            'total_credit' => $totalCredit,
+            'total_debit' => $totalDebit,
+            'net_flow' => $netFlow,
+            'today_credit' => $todayCredit,
+            'today_debit' => $todayDebit,
+            'today_count' => $todayCount,
+            'tag_breakdown' => $tagBreakdown,
+        ];
     }
 
     public function store(Request $request)
