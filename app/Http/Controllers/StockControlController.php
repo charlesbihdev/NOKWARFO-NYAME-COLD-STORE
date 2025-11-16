@@ -824,7 +824,7 @@ class StockControlController extends Controller
 
         // 1) Compute current Available display at start of day
         // Use the same logic as index() method: if no adjustment exists yet, use previous day's Remaining Stock
-        // Check if there's already a [set:available] adjustment on this date (BEFORE deletion)
+        // Check if there's already a [set:available] adjustment on this date (BEFORE any changes)
         $existingSetAvailable = $product->stockMovements()
             ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
             ->where(function ($q) {
@@ -833,16 +833,6 @@ class StockControlController extends Controller
             })
             ->where('notes', 'like', '%[set:available]%')
             ->exists();
-
-        // Delete all existing [set:available] and [set:received] adjustments for this date
-        // This allows multiple overrides on the same day - each adjustment replaces previous ones
-        $product->stockMovements()
-            ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
-            ->where(function ($q) {
-                $q->where('notes', 'like', '%[set:available]%')
-                    ->orWhere('notes', 'like', '%[set:received]%');
-            })
-            ->delete();
 
         if ($existingSetAvailable) {
             // If adjustment exists, use baseline calculation (excluding previous day's [set:available])
@@ -992,6 +982,74 @@ class StockControlController extends Controller
                 ->where('notes', 'like', '%[set:received]%')
         );
         $currentReceivedDisplay = $receivedRaw + ($setRecvInSoFar - $setRecvOutSoFar);
+
+        // 3) Validate that adjusted stock can cover sales already made that day
+        // Get total sales on this date (all sales, not filtered by adjustment timestamp)
+        $salesToday = $product->saleItems()
+            ->whereHas('sale', function ($q) use ($date) {
+                $q->whereDate('created_at', $date);
+            })
+            ->sum('quantity');
+
+        // Calculate what the total available will be after adjustment
+        $newAvailableStock = ! empty($validated['available_stock_target'])
+            ? StockHelper::parseCartonLineFormat($validated['available_stock_target'], $product->lines_per_carton)
+            : $currentAvailableDisplay;
+
+        $newReceivedStock = ! empty($validated['received_today_target'])
+            ? StockHelper::parseCartonLineFormat($validated['received_today_target'], $product->lines_per_carton)
+            : $currentReceivedDisplay;
+
+        // Get normal adjustments for the day (excluding [set:*] tags)
+        $normalAdjustmentsIn = $sumMovements(
+            $product->stockMovements()
+                ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_in')
+                ->where(function ($q) {
+                    $q->whereNull('notes')
+                        ->orWhere(function ($q2) {
+                            $q2->where('notes', 'not like', '%[set:available]%')
+                                ->where('notes', 'not like', '%[set:received]%');
+                        });
+                })
+        );
+
+        $normalAdjustmentsOut = $sumMovements(
+            $product->stockMovements()
+                ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+                ->where('type', 'adjustment_out')
+                ->where(function ($q) {
+                    $q->whereNull('notes')
+                        ->orWhere(function ($q2) {
+                            $q2->where('notes', 'not like', '%[set:available]%')
+                                ->where('notes', 'not like', '%[set:received]%');
+                        });
+                })
+        );
+
+        $totalAvailableAfterAdjustment = $newAvailableStock + $newReceivedStock + $normalAdjustmentsIn - $normalAdjustmentsOut;
+
+        // Check if adjusted stock is less than sales made that day
+        if ($totalAvailableAfterAdjustment < $salesToday) {
+            $salesTodayFormatted = StockHelper::formatCartonLine($salesToday, $product->lines_per_carton);
+            $adjustedStockFormatted = StockHelper::formatCartonLine($totalAvailableAfterAdjustment, $product->lines_per_carton);
+
+            return back()->withErrors([
+                'adjustment' => "Cannot adjust stock to {$adjustedStockFormatted}. Sales made today: {$salesTodayFormatted}. " .
+                    'Adjusted stock must be at least equal to sales already made.',
+            ]);
+        }
+
+        // Validation passed - now we can safely delete existing adjustments and create new ones
+        // Delete all existing [set:available] and [set:received] adjustments for this date
+        // This allows multiple overrides on the same day - each adjustment replaces previous ones
+        $product->stockMovements()
+            ->whereBetween('created_at', [$date . ' 00:00:00', $date . ' 23:59:59'])
+            ->where(function ($q) {
+                $q->where('notes', 'like', '%[set:available]%')
+                    ->orWhere('notes', 'like', '%[set:received]%');
+            })
+            ->delete();
 
         // Apply targets as minimal deltas so displays equal targets exactly
         $createdAdjustment = false;
