@@ -47,7 +47,7 @@ export default function BankTransferForm({ tags, lastBalance, isOpen, setIsOpen 
         post(route('bank-transfers.store'), {
             preserveScroll: true,
             preserveState: true,
-            only: ['bank_transfers', 'last_balance', 'errors', 'flash'],
+            only: ['bank_transfers', 'last_balance', 'statistics', 'errors', 'flash'],
             onSuccess: () => {
                 reset();
                 setIsOpen(false);

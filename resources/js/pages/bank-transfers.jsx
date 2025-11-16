@@ -9,7 +9,7 @@ import BankTransfersTable from '../components/bank-transfer/BankTransfersTable';
 import DeleteConfirmDialog from '../components/bank-transfer/DeleteConfirmDialog';
 import TagCreationForm from '../components/bank-transfer/TagCreationForm';
 
-export default function BankTransfers({ bank_transfers = [], tags = [], last_balance = 0, start_date = '', end_date = '', analytics = null }) {
+export default function BankTransfers({ bank_transfers = [], tags = [], last_balance = 0, start_date = '', end_date = '', statistics = null }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [deleteTransferId, setDeleteTransferId] = useState(null);
 
@@ -67,7 +67,7 @@ export default function BankTransfers({ bank_transfers = [], tags = [], last_bal
 
                 <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateChange} />
 
-                <BankTransferAnalytics analytics={analytics} />
+                <BankTransferAnalytics statistics={statistics} startDate={startDate} endDate={endDate} />
 
                 <BankTransfersTable bankTransfers={bank_transfers} onDeleteClick={setDeleteTransferId} />
 
