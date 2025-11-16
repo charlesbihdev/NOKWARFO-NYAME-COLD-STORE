@@ -93,8 +93,21 @@ class SalesTransactionController extends Controller
             'payment_type' => 'required|in:cash,credit,partial',
         ]);
 
-        if (! isset($validated['customer_id']) && empty($validated['customer_name'])) {
-            return redirect()->back()->withErrors(['customer_id' => 'Either customer ID or customer name must be provided.'])->withInput();
+        // Validate customer requirements based on payment type
+        if (in_array($validated['payment_type'], ['credit', 'partial'])) {
+            // Credit and partial sales MUST have a registered customer (for tracking who owes money)
+            if (empty($validated['customer_id'])) {
+                return redirect()->back()->withErrors([
+                    'customer_id' => 'Credit and partial sales require selecting a registered customer. You cannot use a custom name for credit transactions.',
+                ])->withInput();
+            }
+        } else {
+            // Cash sales can use either customer_id OR customer_name (walk-in customers allowed)
+            if (! isset($validated['customer_id']) && empty($validated['customer_name'])) {
+                return redirect()->back()->withErrors([
+                    'customer_id' => 'Either select a customer or enter a customer name.',
+                ])->withInput();
+            }
         }
 
         // Load all products involved at once to avoid repeated DB queries

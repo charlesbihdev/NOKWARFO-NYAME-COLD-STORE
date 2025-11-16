@@ -8,13 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { AlertTriangle, Wallet } from 'lucide-react';
 import { useState } from 'react';
 
-function CreditCollection({ credit_collections = [], outstanding_debts = [], customers = [] }) {
+function CreditCollection({ credit_collections = [], outstanding_debts = [], customers = [], date }) {
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedDate, setSelectedDate] = useState(date || new Date().toISOString().split('T')[0]);
 
     const filteredDebts = outstanding_debts.filter((debt) => debt.customer.toLowerCase().includes(searchQuery.toLowerCase()));
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -50,34 +51,44 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
     const totalCollected = credit_collections.reduce((sum, col) => sum + parseFloat(col.amount_collected), 0);
     const totalOutstandingDebt = outstanding_debts.reduce((sum, debt) => sum + parseFloat(debt.balance), 0);
 
+    const handleDateChange = (e) => {
+        const newDate = e.target.value;
+        setSelectedDate(newDate);
+        router.get(route('credit-collection.index'), { date: newDate }, { preserveState: true, replace: true });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <div className="min-h-screen space-y-6 bg-gray-100 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold">Credit Collection & Debt Management</h1>
+                    <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium">Collection Date</label>
+                        <Input type="date" value={selectedDate} onChange={handleDateChange} className="w-auto" />
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Collections Today</CardTitle>
+                            <CardTitle className="text-sm font-medium">Collections for Selected Date</CardTitle>
                             <Wallet className="h-4 w-4 text-green-600" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-green-600">GH₵{totalCollected.toFixed(2)}</div>
-                            <p className="text-muted-foreground text-xs">From {credit_collections.length} customers</p>
+                            <p className="text-muted-foreground text-xs">From {credit_collections.length} customers on {new Date(selectedDate).toLocaleDateString()}</p>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Outstanding</CardTitle>
+                            <CardTitle className="text-sm font-medium">Total Outstanding (As of Date)</CardTitle>
                             <AlertTriangle className="h-4 w-4 text-orange-600" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-orange-600">GH₵{totalOutstandingDebt.toFixed(2)}</div>
-                            <p className="text-muted-foreground text-xs">{outstanding_debts.length} customers</p>
+                            <p className="text-muted-foreground text-xs">{outstanding_debts.length} customers as of {new Date(selectedDate).toLocaleDateString()}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -86,7 +97,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                     {/* Credit Collections */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Amount Collected from Creditors (Today's Payments)</CardTitle>
+                            <CardTitle>Amount Collected from Creditors ({new Date(selectedDate).toLocaleDateString()})</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -123,7 +134,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                     <CardHeader className="flex flex-col space-y-4">
                         <CardTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-orange-600" />
-                            Outstanding Customer Debts
+                            Outstanding Customer Debts (As of {new Date(selectedDate).toLocaleDateString()})
                         </CardTitle>
                         <div className="flex items-center space-x-2">
                             <Input

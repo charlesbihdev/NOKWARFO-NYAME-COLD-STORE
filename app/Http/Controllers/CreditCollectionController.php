@@ -10,11 +10,14 @@ use Inertia\Inertia;
 
 class CreditCollectionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Get today's credit collections with customer details
+        // Get date from request, default to today
+        $date = $request->input('date', today()->toDateString());
+
+        // Get credit collections for the selected date with customer details
         $credit_collections = CreditCollection::with('customer')
-            ->whereDate('created_at', today())
+            ->whereDate('created_at', $date)
             ->get()
             ->map(function ($collection) {
                 return [
@@ -25,14 +28,18 @@ class CreditCollectionController extends Controller
                 ];
             });
 
-        // Get all customers who still owe (credit or partial sales)
-        $outstanding_debts = Customer::whereHas('sales', function ($query) {
-            $query->whereIn('payment_type', ['credit', 'partial']);
-        })->get()->map(function ($customer) {
-            // Get all sales
-            $sales = $customer->sales;
+        // Get all customers who still owe (credit or partial sales) AS OF the selected date
+        $outstanding_debts = Customer::whereHas('sales', function ($query) use ($date) {
+            $query->whereIn('payment_type', ['credit', 'partial'])
+                ->whereDate('created_at', '<=', $date);
+        })->get()->map(function ($customer) use ($date) {
+            // Get all sales up to and including the selected date
+            $sales = $customer->sales()
+                ->whereIn('payment_type', ['credit', 'partial'])
+                ->whereDate('created_at', '<=', $date)
+                ->get();
 
-            // Total debt = full credit + unpaid part of partials
+            // Total debt = full credit + unpaid part of partials (as of selected date)
             $total_debt = $sales->sum(function ($sale) {
                 if ($sale->payment_type === 'credit') {
                     return $sale->total;
@@ -43,23 +50,26 @@ class CreditCollectionController extends Controller
                 return 0;
             });
 
-            // Total paid
+            // Total paid up to and including the selected date
             $amount_paid = CreditCollection::where('customer_id', $customer->id)
+                ->whereDate('created_at', '<=', $date)
                 ->sum('amount_collected');
 
             $balance = $total_debt - $amount_paid;
 
-            // Get last payment date
+            // Get last payment date (up to selected date)
             $last_payment = CreditCollection::where('customer_id', $customer->id)
+                ->whereDate('created_at', '<=', $date)
                 ->latest()
                 ->first();
 
-            // Fallback to last credit/partial sale if no payment
+            // Fallback to last credit/partial sale if no payment (up to selected date)
             if ($last_payment) {
                 $last_payment_date = $last_payment->created_at;
             } else {
                 $last_credit_sale = $customer->sales()
                     ->whereIn('payment_type', ['credit', 'partial'])
+                    ->whereDate('created_at', '<=', $date)
                     ->latest()
                     ->first();
 
@@ -75,17 +85,18 @@ class CreditCollectionController extends Controller
                     'balance' => $balance,
                     'last_payment' => $last_payment_date ? $last_payment_date->format('Y-m-d') : null,
                     'days_overdue' => $last_payment
-                        ? $last_payment->created_at->startOfDay()->diffInDays(now()->startOfDay())
+                        ? $last_payment->created_at->startOfDay()->diffInDays(now()->parse($date)->startOfDay())
                         : optional($customer->sales()
                             ->where(function ($q) {
                                 $q->where('payment_type', 'credit')
                                     ->orWhere('payment_type', 'partial');
                             })
+                            ->whereDate('created_at', '<=', $date)
                             ->latest()
                             ->first())
                             ?->created_at
                             ?->startOfDay()
-                            ->diffInDays(now()->startOfDay()),
+                            ->diffInDays(now()->parse($date)->startOfDay()),
 
                 ];
             }
@@ -100,6 +111,7 @@ class CreditCollectionController extends Controller
             'credit_collections' => $credit_collections,
             'outstanding_debts' => $outstanding_debts,
             'customers' => $customers,
+            'date' => $date,
         ]);
     }
 
