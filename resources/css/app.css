@@ -156,3 +156,52 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ========================================
+   THERMAL RECEIPT PRINTER STYLES (80mm)
+   Optimized for Birch CV2 and similar
+   ======================================== */
+
+@media print {
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+
+    html,
+    body {
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    /* Force crisp black-and-white output */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    /* Receipt-specific print styles */
+    .receipt-container {
+        width: 80mm !important;
+        max-width: 80mm !important;
+        padding: 2mm !important;
+        margin: 0 !important;
+        background: white !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    /* Hide everything except receipts when printing */
+    body > *:not(.receipt-print-wrapper) {
+        display: none !important;
+    }
+
+    .receipt-print-wrapper {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+    }
+}
