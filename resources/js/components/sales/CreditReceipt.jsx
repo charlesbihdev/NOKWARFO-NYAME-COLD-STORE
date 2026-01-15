@@ -5,13 +5,7 @@ import { Printer, X } from 'lucide-react';
 
 const CreditReceipt = ({ transaction, onClose }) => {
     const handlePrint = () => {
-        // Add print class to body to help with print styling
-        document.body.classList.add('printing-receipt');
         window.print();
-        // Remove class after print dialog closes
-        setTimeout(() => {
-            document.body.classList.remove('printing-receipt');
-        }, 500);
     };
 
     const totalAmount = transaction.sale_items.reduce((sum, item) => sum + parseFloat(item.total), 0);
