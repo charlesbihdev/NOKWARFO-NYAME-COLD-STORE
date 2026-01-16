@@ -17,21 +17,21 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
     return (
         <div className="receipt-print-wrapper fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:static print:block print:bg-transparent print:p-0">
-            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:w-[80mm] print:max-w-[80mm] print:overflow-visible print:rounded-none print:p-2 print:shadow-none">
+            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:w-[80mm] print:max-w-[80mm] print:overflow-visible print:rounded-none print:p-[2mm] print:shadow-none">
 
                 {/* Store Header */}
                 <div className="mb-4 text-center print:mb-2">
                     <div className="mx-auto mb-2 w-full border-b-2 border-dashed border-black print:border-b print:mb-1"></div>
-                    <h1 className="text-xl font-bold uppercase tracking-wide print:text-sm">
+                    <h1 className="text-xl font-bold uppercase tracking-wide print:text-base">
                         {storeName}
                     </h1>
                     {storeAddress && (
-                        <p className="text-sm text-gray-600 print:text-[10px] print:text-black">
+                        <p className="text-sm text-gray-600 print:text-xs print:text-black">
                             {storeAddress}
                         </p>
                     )}
                     {storePhone && (
-                        <p className="text-sm text-gray-600 print:text-[10px] print:text-black">
+                        <p className="text-sm text-gray-600 print:text-xs print:text-black">
                             Tel: {storePhone}
                         </p>
                     )}
@@ -40,13 +40,13 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
                 {/* Receipt Type Badge */}
                 <div className="mb-4 text-center print:mb-2">
-                    <span className="inline-block rounded bg-red-100 px-4 py-1 text-lg font-bold text-red-700 print:bg-transparent print:px-0 print:py-0 print:text-xs print:text-black print:border print:border-black">
+                    <span className="inline-block rounded bg-red-100 px-4 py-1 text-lg font-bold text-red-700 print:bg-transparent print:px-0 print:py-0 print:text-sm print:text-black print:border print:border-black">
                         CREDIT SALE
                     </span>
                 </div>
 
                 {/* Transaction Details */}
-                <div className="mb-4 space-y-2 text-sm print:mb-2 print:space-y-1 print:text-[10px]">
+                <div className="mb-4 space-y-2 text-sm print:mb-2 print:space-y-1 print:text-xs">
                     <div className="flex justify-between">
                         <span className="font-semibold">Receipt #:</span>
                         <span className="font-mono">{transaction.id}</span>
@@ -65,7 +65,7 @@ const CreditReceipt = ({ transaction, onClose }) => {
                 <div className="my-3 border-t border-dashed border-gray-400 print:my-1 print:border-black"></div>
 
                 {/* Items Table */}
-                <table className="mb-4 w-full text-sm print:mb-2 print:text-[9px]">
+                <table className="mb-4 w-full text-sm print:mb-2 print:text-[11px]">
                     <thead>
                         <tr className="border-b-2 border-black">
                             <th className="pb-2 text-left font-bold print:pb-1">Item</th>
@@ -96,16 +96,16 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
                 {/* Totals Section */}
                 <div className="space-y-2 border-t-2 border-black pt-3 print:space-y-1 print:pt-2">
-                    <div className="flex justify-between text-base print:text-[10px]">
+                    <div className="flex justify-between text-base print:text-xs">
                         <span className="font-semibold">Subtotal:</span>
                         <span>GH₵ {totalAmount.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-base print:text-[10px]">
+                    <div className="flex justify-between text-base print:text-xs">
                         <span className="font-semibold">Amount Paid:</span>
                         <span>GH₵ {parseFloat(transaction.amount_paid).toFixed(2)}</span>
                     </div>
                     <div className="my-2 border-t border-dashed border-gray-400 print:my-1 print:border-black"></div>
-                    <div className="flex justify-between text-lg font-bold print:text-xs">
+                    <div className="flex justify-between text-lg font-bold print:text-sm">
                         <span className="text-red-600 print:text-black">BALANCE DUE:</span>
                         <span className="text-red-600 print:text-black">
                             GH₵ {parseFloat(transaction.amount_owed).toFixed(2)}
@@ -115,13 +115,13 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
                 {/* Footer */}
                 <div className="mt-6 border-t-2 border-dashed border-black pt-4 text-center print:mt-3 print:pt-2">
-                    <p className="text-xs text-gray-500 print:text-[8px] print:text-black">
-                        Please retain this receipt for your records.
+                    <p className="text-xs text-gray-500 print:text-[10px] print:text-black">
+                        Goods sold are not returnable.
                     </p>
-                    <p className="mt-2 text-sm font-semibold print:mt-1 print:text-[10px]">
+                    <p className="mt-2 text-sm font-semibold print:mt-1 print:text-xs">
                         Thank You For Your Patronage!
                     </p>
-                    <div className="mt-3 text-[10px] text-gray-400 print:mt-2 print:text-[8px] print:text-black">
+                    <div className="mt-3 text-[10px] text-gray-400 print:mt-2 print:text-[10px] print:text-black">
                         *** CREDIT TRANSACTION ***
                     </div>
                 </div>
