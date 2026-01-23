@@ -11,13 +11,18 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Mail, MapPin, Phone, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Mail, MapPin, Phone, Plus, Printer, ShoppingCart, Trash2 } from 'lucide-react';
+import CustomerPaymentReceipt from '@/components/customers/CustomerPaymentReceipt';
 
 export default function CustomerTransactions({ customer, transactions }) {
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [showDebtDialog, setShowDebtDialog] = useState(false);
     const [editingDebt, setEditingDebt] = useState(null);
     const [showEditDebtDialog, setShowEditDebtDialog] = useState(false);
+    const [editingPayment, setEditingPayment] = useState(null);
+    const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
+    const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
+    const [currentPaymentReceipt, setCurrentPaymentReceipt] = useState(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         amount_collected: '',
@@ -32,12 +37,31 @@ export default function CustomerTransactions({ customer, transactions }) {
         notes: '',
     });
 
+    const { data: editPaymentData, setData: setEditPaymentData, put: putPayment, processing: processingPayment, errors: errorsPayment, reset: resetPayment } = useForm({
+        amount_collected: '',
+        payment_date: '',
+        notes: '',
+    });
+
     const handlePaymentSubmit = (e) => {
         e.preventDefault();
         post(route('customers.payments.store', customer.id), {
-            onSuccess: () => {
+            onSuccess: (page) => {
                 setShowPaymentDialog(false);
                 reset();
+
+                // Show receipt after successful payment
+                // Find the most recent payment in the transactions
+                if (page.props.transactions && page.props.transactions.data) {
+                    const mostRecentPayment = page.props.transactions.data.find(
+                        t => t.payment_amount > 0 && t.type !== 'debt' && t.type !== 'historical_debt'
+                    );
+
+                    if (mostRecentPayment) {
+                        setCurrentPaymentReceipt(mostRecentPayment);
+                        setShowPaymentReceipt(true);
+                    }
+                }
             },
         });
     };
@@ -70,6 +94,40 @@ export default function CustomerTransactions({ customer, transactions }) {
                 preserveScroll: true,
             });
         }
+    };
+
+    const handleEditPayment = (transaction) => {
+        setEditingPayment(transaction);
+        setEditPaymentData({
+            amount_collected: transaction.payment_amount,
+            payment_date: transaction.date,
+            notes: transaction.notes || '',
+        });
+        setShowEditPaymentDialog(true);
+    };
+
+    const handleEditPaymentSubmit = (e) => {
+        e.preventDefault();
+        putPayment(route('customers.payments.update', editingPayment.payment_id), {
+            onSuccess: () => {
+                setShowEditPaymentDialog(false);
+                resetPayment();
+                setEditingPayment(null);
+            },
+        });
+    };
+
+    const handleDeletePayment = (transaction) => {
+        if (confirm('Are you sure you want to delete this payment? This will affect all subsequent balance calculations.')) {
+            router.delete(route('customers.payments.delete', transaction.payment_id), {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const handlePrintPaymentReceipt = (transaction) => {
+        setCurrentPaymentReceipt(transaction);
+        setShowPaymentReceipt(true);
     };
 
     const getDebtStatusColor = (status) => {
@@ -400,6 +458,34 @@ export default function CustomerTransactions({ customer, transactions }) {
                                                             </Button>
                                                         </div>
                                                     )}
+                                                    {transaction.payment_amount > 0 && transaction.type !== 'debt' && transaction.type !== 'historical_debt' && (
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handlePrintPaymentReceipt(transaction)}
+                                                                className="text-green-600 hover:text-green-700"
+                                                            >
+                                                                <Printer className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleEditPayment(transaction)}
+                                                                className="text-blue-600 hover:text-blue-700"
+                                                            >
+                                                                <Edit className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDeletePayment(transaction)}
+                                                                className="text-red-600 hover:text-red-700"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -519,8 +605,102 @@ export default function CustomerTransactions({ customer, transactions }) {
                             </form>
                         </DialogContent>
                     </Dialog>
+
+                    {/* Edit Payment Dialog */}
+                    <Dialog open={showEditPaymentDialog} onOpenChange={setShowEditPaymentDialog}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Edit Payment Record</DialogTitle>
+                                <DialogDescription>Update the payment record details.</DialogDescription>
+                            </DialogHeader>
+
+                            {/* Outstanding Debt Display */}
+                            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-700">Outstanding Debt:</span>
+                                        <span className="text-xl font-bold text-orange-600">{formatCurrency(customer.outstanding_balance)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">Total Debt:</span>
+                                        <span className="font-medium text-gray-900">{formatCurrency(customer.total_debt)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">Paid So Far:</span>
+                                        <span className="font-medium text-green-600">{formatCurrency(customer.total_payments)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleEditPaymentSubmit}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="edit_payment_amount">
+                                            Amount <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="edit_payment_amount"
+                                            type="number"
+                                            step="0.01"
+                                            min="0.01"
+                                            value={editPaymentData.amount_collected}
+                                            onChange={(e) => setEditPaymentData('amount_collected', e.target.value)}
+                                            required
+                                        />
+                                        {errorsPayment.amount_collected && <p className="mt-1 text-sm text-red-500">{errorsPayment.amount_collected}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="edit_payment_date">
+                                            Payment Date <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="edit_payment_date"
+                                            type="date"
+                                            value={editPaymentData.payment_date}
+                                            onChange={(e) => setEditPaymentData('payment_date', e.target.value)}
+                                            required
+                                        />
+                                        {errorsPayment.payment_date && <p className="mt-1 text-sm text-red-500">{errorsPayment.payment_date}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="edit_payment_notes">Notes</Label>
+                                        <Textarea
+                                            id="edit_payment_notes"
+                                            value={editPaymentData.notes}
+                                            onChange={(e) => setEditPaymentData('notes', e.target.value)}
+                                            rows={3}
+                                            maxLength={1000}
+                                        />
+                                        {errorsPayment.notes && <p className="mt-1 text-sm text-red-500">{errorsPayment.notes}</p>}
+                                    </div>
+                                </div>
+                                <DialogFooter className="mt-6">
+                                    <Button type="button" variant="outline" onClick={() => setShowEditPaymentDialog(false)} disabled={processingPayment}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="submit" disabled={processingPayment} className="bg-blue-600 hover:bg-blue-700">
+                                        {processingPayment ? 'Updating...' : 'Update Payment'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
+
+            {/* Customer Payment Receipt */}
+            {showPaymentReceipt && currentPaymentReceipt && (
+                <CustomerPaymentReceipt
+                    payment={currentPaymentReceipt}
+                    customer={customer}
+                    onClose={() => {
+                        setShowPaymentReceipt(false);
+                        setCurrentPaymentReceipt(null);
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

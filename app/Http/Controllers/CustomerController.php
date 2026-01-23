@@ -148,6 +148,7 @@ class CustomerController extends Controller
             ->map(function ($collection) {
                 return [
                     'id' => 'payment_'.$collection->id,
+                    'payment_id' => $collection->id,
                     'date' => $collection->created_at->format('Y-m-d'),
                     'type' => 'payment',
                     'reference' => 'PAY-'.$collection->id,
@@ -246,6 +247,50 @@ class CustomerController extends Controller
 
         return back()->with([
             'success' => 'Payment recorded successfully',
+        ]);
+    }
+
+    public function updatePayment(Request $request, CreditCollection $payment)
+    {
+        $validated = $request->validate([
+            'amount_collected' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Validate payment amount doesn't exceed debt (considering other payments)
+        $customer = $payment->customer;
+        $currentOutstandingBalance = $customer->getOutstandingBalance();
+        $originalPaymentAmount = $payment->amount_collected;
+        $newOutstandingWithChange = $currentOutstandingBalance + $originalPaymentAmount - $validated['amount_collected'];
+
+        if ($newOutstandingWithChange < 0) {
+            return back()->withErrors([
+                'amount_collected' => 'Payment amount cannot exceed current debt',
+            ]);
+        }
+
+        // Update the credit collection record
+        $payment->update([
+            'amount_collected' => $validated['amount_collected'],
+            'notes' => $validated['notes'],
+        ]);
+
+        // Update the created_at to reflect the payment date
+        $payment->created_at = $validated['payment_date'];
+        $payment->save();
+
+        return back()->with([
+            'success' => 'Payment updated successfully',
+        ]);
+    }
+
+    public function deletePayment(CreditCollection $payment)
+    {
+        $payment->delete();
+
+        return back()->with([
+            'success' => 'Payment deleted successfully',
         ]);
     }
 

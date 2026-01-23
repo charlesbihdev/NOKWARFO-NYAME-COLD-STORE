@@ -81,6 +81,8 @@ Route::middleware('auth')->group(function () {
     // Enhanced customer debt management routes
     Route::get('/customers/{customer}/transactions', [CustomerController::class, 'transactions'])->name('customers.transactions');
     Route::post('/customers/{customer}/payments', [CustomerController::class, 'storePayment'])->name('customers.payments.store');
+    Route::put('/customers/payments/{payment}', [CustomerController::class, 'updatePayment'])->name('customers.payments.update');
+    Route::delete('/customers/payments/{payment}', [CustomerController::class, 'deletePayment'])->name('customers.payments.delete');
     Route::post('/customers/{customer}/debts', [CustomerController::class, 'storeDebt'])->name('customers.debts.store');
     Route::put('/customers/{customer}/debts/{debt}', [CustomerController::class, 'updateDebt'])->name('customers.debts.update');
     Route::delete('/customers/{customer}/debts/{debt}', [CustomerController::class, 'destroyDebt'])->name('customers.debts.destroy');
