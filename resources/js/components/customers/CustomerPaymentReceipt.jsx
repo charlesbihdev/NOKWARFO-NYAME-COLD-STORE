@@ -14,9 +14,8 @@ const CustomerPaymentReceipt = ({ payment, customer, onClose }) => {
     const storePhone = import.meta.env.VITE_STORE_PHONE || '';
 
     return (
-        <div className="receipt-print-wrapper fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:static print:block print:bg-transparent print:p-0">
-            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:w-[80mm] print:max-w-[80mm] print:overflow-visible print:rounded-none print:p-0 print:shadow-none">
-                {/* Store Header */}
+         <div className="receipt-print-wrapper fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:static print:block print:bg-transparent print:p-0">
+            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:overflow-visible print:rounded-none print:shadow-none">
                 <div className="mb-4 text-center print:mb-2">
                     <div className="mx-auto mb-2 w-full border-b-2 border-dashed border-black print:mb-1 print:border-b"></div>
                     <h1 className="text-xl font-bold uppercase tracking-wide print:text-base">{storeName}</h1>
@@ -53,7 +52,7 @@ const CustomerPaymentReceipt = ({ payment, customer, onClose }) => {
 
                 {/* Payment Details */}
                 <div className="mb-4 space-y-2 print:mb-2 print:space-y-1">
-                    <div className="flex justify-between text-base print:text-xs">
+                    <div className="flex justify-between text-base print:text-sm">
                         <span className="font-semibold">Payment Amount:</span>
                         <span className="font-bold text-green-600 print:text-black">GH₵ {parseFloat(payment.amount_collected || payment.payment_amount || 0).toFixed(2)}</span>
                     </div>
@@ -68,7 +67,7 @@ const CustomerPaymentReceipt = ({ payment, customer, onClose }) => {
                     {payment.outstanding_balance !== undefined && (
                         <>
                             <div className="my-2 border-t border-dashed border-gray-400 print:my-1 print:border-black"></div>
-                            <div className="flex justify-between text-base print:text-xs">
+                            <div className="flex justify-between text-base print:text-sm">
                                 <span className="font-semibold">Remaining Balance:</span>
                                 <span className="font-bold text-red-600 print:text-black">GH₵ {parseFloat(payment.outstanding_balance || payment.current_balance || 0).toFixed(2)}</span>
                             </div>
@@ -95,7 +94,7 @@ const CustomerPaymentReceipt = ({ payment, customer, onClose }) => {
                             <p className="mt-1">Outstanding balance: GH₵ {parseFloat(payment.outstanding_balance || payment.current_balance || 0).toFixed(2)}</p>
                         </div>
                     ) : (
-                        <div className="flex justify-between text-base text-green-600 print:text-xs print:text-black">
+                        <div className="flex justify-between text-base text-green-600 print:text-sm print:text-black">
                             <span className="font-semibold">ACCOUNT SETTLED</span>
                             <span>✓</span>
                         </div>

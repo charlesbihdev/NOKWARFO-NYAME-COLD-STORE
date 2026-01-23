@@ -17,7 +17,7 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
     return (
         <div className="receipt-print-wrapper fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:static print:block print:bg-transparent print:p-0">
-            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:w-[80mm] print:max-w-[80mm] print:overflow-visible print:rounded-none print:p-0 print:shadow-none">
+            <div className="receipt-container max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl print:max-h-none print:overflow-visible print:rounded-none print:shadow-none">
                 {/* Store Header */}
                 <div className="mb-4 text-center print:mb-2">
                     <div className="mx-auto mb-2 w-full border-b-2 border-dashed border-black print:mb-1 print:border-b"></div>
@@ -35,7 +35,7 @@ const CreditReceipt = ({ transaction, onClose }) => {
                 </div>
 
                 {/* Transaction Details */}
-                <div className="mb-4 space-y-2 text-sm print:mb-2 print:space-y-1 print:text-[10px]">
+                <div className="mb-4 space-y-2 text-sm print:mb-2 print:space-y-1 print:text-xs">
                     <div className="flex justify-between">
                         <span className="font-semibold">Receipt #:</span>
                         <span className="font-mono">{transaction.id}</span>
@@ -77,16 +77,16 @@ const CreditReceipt = ({ transaction, onClose }) => {
 
                 {/* Totals Section */}
                 <div className="space-y-2 border-t-2 border-black pt-3 print:space-y-1 print:pt-2">
-                    <div className="flex justify-between text-base print:text-[10px]">
+                    <div className="flex justify-between text-base print:text-xs">
                         <span className="font-semibold">Subtotal:</span>
                         <span>GH₵ {totalAmount.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-base print:text-[10px]">
+                    <div className="flex justify-between text-base print:text-xs">
                         <span className="font-semibold">Amount Paid:</span>
                         <span>GH₵ {parseFloat(transaction.amount_paid).toFixed(2)}</span>
                     </div>
                     <div className="my-2 border-t border-dashed border-gray-400 print:my-1 print:border-black"></div>
-                    <div className="flex justify-between text-lg font-bold print:text-xs">
+                    <div className="flex justify-between text-lg font-bold print:text-sm">
                         <span className="text-red-600 print:text-black">BALANCE DUE:</span>
                         <span className="text-red-600 print:text-black">GH₵ {parseFloat(transaction.amount_owed).toFixed(2)}</span>
                     </div>
@@ -95,7 +95,7 @@ const CreditReceipt = ({ transaction, onClose }) => {
                 {/* Footer */}
                 <div className="mt-6 border-t-2 border-dashed border-black pt-4 text-center print:mt-3 print:pt-2">
                     <p className="text-sm text-gray-500 print:text-[10px] print:text-black">Goods sold are NOT returnable.</p>
-                    <p className="mt-2 text-sm font-semibold print:mt-1 print:text-[10px]">Thank You For Your Patronage!</p>
+                    <p className="mt-2 text-sm font-semibold print:mt-1 print:text-xs">Thank You For Your Patronage!</p>
                     <div className="mt-3 text-[10px] text-gray-400 print:mt-2 print:text-[10px] print:text-black">*** CREDIT TRANSACTION ***</div>
                 </div>
 
