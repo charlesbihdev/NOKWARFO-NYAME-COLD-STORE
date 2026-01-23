@@ -105,9 +105,12 @@ class SupplierController extends Controller
             'transaction_date' => 'required|date',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
+            'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.product_name' => 'required|string|max:255',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0.01',
+            'items.*.cartons' => 'required|integer|min:0',
+            'items.*.lines' => 'required|integer|min:0',
+            'items.*.lines_per_carton' => 'nullable|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
             'make_payment' => 'nullable|boolean',
             'payment_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|max:50',
@@ -117,7 +120,12 @@ class SupplierController extends Controller
         try {
             // Calculate total amount from items
             $totalAmount = collect($validated['items'])->sum(function ($item) {
-                return $item['quantity'] * $item['unit_price'];
+                $cartons = $item['cartons'] ?? 0;
+                $lines = $item['lines'] ?? 0;
+                $linesPerCarton = $item['lines_per_carton'] ?? 1;
+                $totalQuantity = ($cartons * $linesPerCarton) + $lines;
+
+                return $totalQuantity * $item['unit_price'];
             });
 
             // Create the credit transaction
@@ -206,21 +214,34 @@ class SupplierController extends Controller
             'transaction_date' => 'required|date',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
+            'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.product_name' => 'required|string|max:255',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0.01',
+            'items.*.cartons' => 'required|integer|min:0',
+            'items.*.lines' => 'required|integer|min:0',
+            'items.*.lines_per_carton' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
         try {
             // Calculate total amount from items
             $totalAmount = collect($validated['items'])->sum(function ($item) {
-                return $item['quantity'] * $item['unit_price'];
+                $cartons = $item['cartons'] ?? 0;
+                $lines = $item['lines'] ?? 0;
+                $linesPerCarton = $item['lines_per_carton'] ?? 1;
+                $totalQuantity = ($cartons * $linesPerCarton) + $lines;
+
+                return $totalQuantity * $item['unit_price'];
             });
 
             // Auto-generate description from items
             $description = 'Credit purchase: '.collect($validated['items'])
                 ->map(function ($item) {
-                    return $item['product_name'].' (Qty: '.$item['quantity'].')';
+                    $cartons = $item['cartons'] ?? 0;
+                    $lines = $item['lines'] ?? 0;
+                    $linesPerCarton = $item['lines_per_carton'] ?? 1;
+                    $totalQuantity = ($cartons * $linesPerCarton) + $lines;
+
+                    return $item['product_name'].' (Qty: '.$totalQuantity.')';
                 })
                 ->join(', ');
 
