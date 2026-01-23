@@ -65,6 +65,9 @@ class Customer extends Model
 
     public function getDebt(): float
     {
+        // Get historical debts
+        $historicalDebt = $this->debts()->sum('amount');
+
         // Get total for credit sales
         $creditTotal = $this->sales()
             ->where('status', 'completed')
@@ -77,11 +80,14 @@ class Customer extends Model
             ->where('payment_type', 'partial')
             ->sum(DB::raw('total - amount_paid'));
 
-        return $creditTotal + $partialTotal;
+        return $historicalDebt + $creditTotal + $partialTotal;
     }
 
     public function getOutstandingBalance(): float
     {
+        // Get historical debts
+        $historicalDebt = $this->debts()->sum('amount');
+
         // Get total for credit sales
         $creditTotal = $this->sales()
             ->where('status', 'completed')
@@ -95,7 +101,7 @@ class Customer extends Model
             ->sum(DB::raw('total - amount_paid'));
 
         // Total amount the customer owes
-        $totalDebt = $creditTotal + $partialTotal;
+        $totalDebt = $historicalDebt + $creditTotal + $partialTotal;
 
         // Total paid towards debt
         $amountPaid = CreditCollection::where('customer_id', $this->id)
@@ -105,8 +111,13 @@ class Customer extends Model
         return max($totalDebt - $amountPaid, 0);
     }
 
-    public function creditCollections()
+    public function creditCollections(): HasMany
     {
         return $this->hasMany(CreditCollection::class);
+    }
+
+    public function debts(): HasMany
+    {
+        return $this->hasMany(CustomerDebt::class);
     }
 }

@@ -8,7 +8,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 export default function AddTransactionModal({ isOpen, onClose, supplier, products, errors = {} }) {
-    const [items, setItems] = useState([{ product_name: '', quantity: 1, unit_price: 0 }]);
+    const [items, setItems] = useState([{
+        product_id: null,
+        product_name: '',
+        cartons: 0,
+        lines: 0,
+        lines_per_carton: 1,
+        unit_price: 0
+    }]);
 
     const { data, setData, post, processing, reset } = useForm({
         supplier_id: supplier?.id || '',
@@ -25,7 +32,14 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
     useEffect(() => {
         if (isOpen) {
             reset();
-            setItems([{ product_name: '', quantity: 1, unit_price: 0 }]);
+            setItems([{
+                product_id: null,
+                product_name: '',
+                cartons: 0,
+                lines: 0,
+                lines_per_carton: 1,
+                unit_price: 0
+            }]);
             setData({
                 supplier_id: supplier?.id || '',
                 transaction_date: new Date().toISOString().split('T')[0],
@@ -45,7 +59,14 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
     }, [items]);
 
     function addItem() {
-        setItems([...items, { product_name: '', quantity: 1, unit_price: 0 }]);
+        setItems([...items, {
+            product_id: null,
+            product_name: '',
+            cartons: 0,
+            lines: 0,
+            lines_per_carton: 1,
+            unit_price: 0
+        }]);
     }
 
     function removeItem(index) {
@@ -58,17 +79,51 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
     function updateItem(index, field, value) {
         const newItems = [...items];
         newItems[index][field] = value;
+
+        // If product is selected, auto-fill product_id, name, and lines_per_carton
+        if (field === 'product_name') {
+            const selectedProduct = products.find(p => p.name === value);
+            if (selectedProduct) {
+                newItems[index]['product_id'] = selectedProduct.id;
+                newItems[index]['lines_per_carton'] = selectedProduct.lines_per_carton || 1;
+            } else {
+                newItems[index]['product_id'] = null;
+            }
+        }
+
         setItems(newItems);
     }
 
-
-
     function calculateTotal() {
         return items.reduce((sum, item) => {
-            const quantity = parseFloat(item.quantity) || 0;
+            const cartons = parseInt(item.cartons) || 0;
+            const lines = parseInt(item.lines) || 0;
+            const linesPerCarton = parseInt(item.lines_per_carton) || 1;
+            const totalQuantity = (cartons * linesPerCarton) + lines;
             const unitPrice = parseFloat(item.unit_price) || 0;
-            return sum + (quantity * unitPrice);
+            return sum + (totalQuantity * unitPrice);
         }, 0);
+    }
+
+    function getQuantityDisplay(item) {
+        const cartons = parseInt(item.cartons) || 0;
+        const lines = parseInt(item.lines) || 0;
+        const linesPerCarton = parseInt(item.lines_per_carton) || 1;
+
+        // If lines_per_carton is 1, just show total quantity
+        if (linesPerCarton <= 1) {
+            return cartons + lines;
+        }
+
+        // Format as XC YL
+        if (cartons > 0 && lines > 0) {
+            return `${cartons}C${lines}L`;
+        } else if (cartons > 0) {
+            return `${cartons}C`;
+        } else if (lines > 0) {
+            return `${lines}L`;
+        }
+        return '0';
     }
 
     function handleSubmit(e) {
@@ -139,7 +194,7 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
 
                         {items.map((item, index) => (
                             <div key={index} className="grid grid-cols-12 gap-3 p-4 border rounded-lg bg-gray-50">
-                                <div className="col-span-5">
+                                <div className="col-span-12">
                                     <Label htmlFor={`product_${index}`}>Product Name *</Label>
                                     <Input
                                         id={`product_${index}`}
@@ -163,18 +218,47 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                 </div>
 
                                 <div className="col-span-3">
-                                    <Label htmlFor={`quantity_${index}`}>Quantity *</Label>
+                                    <Label htmlFor={`cartons_${index}`}>Cartons</Label>
                                     <Input
-                                        id={`quantity_${index}`}
+                                        id={`cartons_${index}`}
+                                        type="number"
+                                        min="0"
+                                        value={item.cartons}
+                                        onChange={(e) => updateItem(index, 'cartons', parseInt(e.target.value) || 0)}
+                                    />
+                                    {errors[`items.${index}.cartons`] && (
+                                        <div className="mt-1 text-xs text-red-500">{errors[`items.${index}.cartons`]}</div>
+                                    )}
+                                </div>
+
+                                <div className="col-span-3">
+                                    <Label htmlFor={`lines_${index}`}>Lines</Label>
+                                    <Input
+                                        id={`lines_${index}`}
+                                        type="number"
+                                        min="0"
+                                        value={item.lines}
+                                        onChange={(e) => updateItem(index, 'lines', parseInt(e.target.value) || 0)}
+                                    />
+                                    {errors[`items.${index}.lines`] && (
+                                        <div className="mt-1 text-xs text-red-500">{errors[`items.${index}.lines`]}</div>
+                                    )}
+                                </div>
+
+                                <div className="col-span-3">
+                                    <Label htmlFor={`lines_per_carton_${index}`}>Lines/Carton</Label>
+                                    <Input
+                                        id={`lines_per_carton_${index}`}
                                         type="number"
                                         min="1"
-                                        value={item.quantity}
-                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                                        required
+                                        value={item.lines_per_carton}
+                                        onChange={(e) => updateItem(index, 'lines_per_carton', parseInt(e.target.value) || 1)}
+                                        disabled={item.product_id !== null}
+                                        className={item.product_id !== null ? 'bg-gray-100' : ''}
                                     />
-                                    {errors[`items.${index}.quantity`] && (
-                                        <div className="mt-1 text-xs text-red-500">{errors[`items.${index}.quantity`]}</div>
-                                    )}
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {item.product_id !== null ? 'Auto-filled from product' : 'Manual entry'}
+                                    </div>
                                 </div>
 
                                 <div className="col-span-3">
@@ -182,10 +266,10 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                     <Input
                                         id={`unit_price_${index}`}
                                         type="number"
-                                        min="1"
-                                        step="1"
+                                        min="0"
+                                        step="0.01"
                                         value={item.unit_price}
-                                        onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value))}
+                                        onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                                         required
                                     />
                                     {errors[`items.${index}.unit_price`] && (
@@ -193,10 +277,13 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                     )}
                                 </div>
 
-                                <div className="col-span-8">
-                                    <Label>Total</Label>
+                                <div className="col-span-11">
+                                    <Label>Quantity & Total</Label>
                                     <div className="text-base font-semibold text-gray-700">
-                                        GHC {((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)}
+                                        {getQuantityDisplay(item)} × GHC {(item.unit_price || 0).toFixed(2)} = GHC {(
+                                            ((parseInt(item.cartons) || 0) * (parseInt(item.lines_per_carton) || 1) + (parseInt(item.lines) || 0)) *
+                                            (parseFloat(item.unit_price) || 0)
+                                        ).toFixed(2)}
                                     </div>
                                 </div>
 

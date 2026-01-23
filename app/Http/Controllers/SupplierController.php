@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
 use App\Models\Supplier;
-use Illuminate\Http\Request;
+use App\Models\SupplierCreditTransaction;
+use App\Models\SupplierCreditTransactionItem;
+use App\Models\SupplierDebt;
 use App\Models\SupplierPayment;
 use App\Services\SupplierCreditService;
-use App\Models\SupplierCreditTransaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class SupplierController extends Controller
 {
@@ -78,7 +80,7 @@ class SupplierController extends Controller
         // Check if supplier has outstanding debt
         if ($supplier->has_outstanding_debt) {
             return back()->withErrors([
-                'error' => 'Cannot delete supplier with outstanding debt. Current balance: ' . $supplier->formatted_total_outstanding,
+                'error' => 'Cannot delete supplier with outstanding debt. Current balance: '.$supplier->formatted_total_outstanding,
             ]);
         }
 
@@ -142,9 +144,9 @@ class SupplierController extends Controller
 
             return back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
-            Log::error('Failed to create transaction: ' . $e->getMessage());
+            Log::error('Failed to create transaction: '.$e->getMessage());
 
-            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to create transaction: '.$e->getMessage()]);
         }
     }
 
@@ -216,9 +218,9 @@ class SupplierController extends Controller
             });
 
             // Auto-generate description from items
-            $description = 'Credit purchase: ' . collect($validated['items'])
+            $description = 'Credit purchase: '.collect($validated['items'])
                 ->map(function ($item) {
-                    return $item['product_name'] . ' (Qty: ' . $item['quantity'] . ')';
+                    return $item['product_name'].' (Qty: '.$item['quantity'].')';
                 })
                 ->join(', ');
 
@@ -244,6 +246,117 @@ class SupplierController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
         }
+    }
+
+    public function updateTransactionItem(Request $request, SupplierCreditTransaction $transaction, SupplierCreditTransactionItem $item)
+    {
+        // Ensure the item belongs to the transaction
+        if ($item->supplier_credit_transaction_id !== $transaction->id) {
+            return back()->withErrors(['error' => 'Item does not belong to this transaction']);
+        }
+
+        $validated = $request->validate([
+            'product_id' => 'nullable|exists:products,id',
+            'product_name' => 'required|string|max:255',
+            'cartons' => 'required|integer|min:0',
+            'lines' => 'required|integer|min:0',
+            'lines_per_carton' => 'required|integer|min:1',
+            'unit_price' => 'required|numeric|min:0',
+        ]);
+
+        // If product_id is provided, get product details
+        if (! empty($validated['product_id'])) {
+            $product = \App\Models\Product::find($validated['product_id']);
+            if ($product) {
+                $validated['product_name'] = $product->name;
+                $validated['lines_per_carton'] = $product->lines_per_carton ?? 1;
+            }
+        }
+
+        $item->update($validated);
+
+        // Recalculate transaction total
+        $newTotal = $transaction->items->sum('total_amount');
+        $transaction->update(['amount_owed' => $newTotal]);
+
+        return back()->with('success', 'Item updated successfully');
+    }
+
+    public function deleteTransactionItem(SupplierCreditTransaction $transaction, SupplierCreditTransactionItem $item)
+    {
+        // Ensure the item belongs to the transaction
+        if ($item->supplier_credit_transaction_id !== $transaction->id) {
+            return back()->withErrors(['error' => 'Item does not belong to this transaction']);
+        }
+
+        // Prevent deleting the last item
+        if ($transaction->items()->count() <= 1) {
+            return back()->withErrors(['error' => 'Cannot delete the last item. Delete the entire transaction instead.']);
+        }
+
+        $item->delete();
+
+        // Recalculate transaction total
+        $newTotal = $transaction->items->sum('total_amount');
+        $transaction->update(['amount_owed' => $newTotal]);
+
+        return back()->with('success', 'Item deleted successfully');
+    }
+
+    // Debt Management
+    public function storeDebt(Request $request, Supplier $supplier)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'debt_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $supplier->debts()->create($validated);
+
+        return back()->with([
+            'success' => 'Debt recorded successfully',
+        ]);
+    }
+
+    public function updateDebt(Request $request, Supplier $supplier, SupplierDebt $debt)
+    {
+        // Ensure debt belongs to this supplier
+        if ($debt->supplier_id !== $supplier->id) {
+            return back()->withErrors([
+                'error' => 'Debt does not belong to this supplier',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'debt_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $debt->update($validated);
+
+        return back()->with([
+            'success' => 'Debt updated successfully',
+        ]);
+    }
+
+    public function destroyDebt(Supplier $supplier, SupplierDebt $debt)
+    {
+        // Ensure debt belongs to this supplier
+        if ($debt->supplier_id !== $supplier->id) {
+            return back()->withErrors([
+                'error' => 'Debt does not belong to this supplier',
+            ]);
+        }
+
+        $debt->delete();
+
+        return back()->with([
+            'success' => 'Debt deleted successfully',
+        ]);
     }
 
     public function transactions(Supplier $supplier)
@@ -292,17 +405,39 @@ class SupplierController extends Controller
                 return $this->creditService->getPaymentSummary($payment, $startDate, $endDate);
             });
 
+        // Get historical debts for the supplier (filtered by date if specified)
+        $debtsQuery = $supplier->debts();
+        if ($startDate && $endDate) {
+            $debtsQuery->whereBetween('debt_date', [$startDate, $endDate]);
+        }
+        $debts = $debtsQuery->orderByDesc('debt_date')->orderByDesc('created_at')->get()
+            ->map(function ($debt) {
+                return [
+                    'id' => 'debt_'.$debt->id,
+                    'debt_id' => $debt->id,
+                    'date' => $debt->debt_date->format('Y-m-d'),
+                    'type' => 'historical_debt',
+                    'amount' => $debt->amount,
+                    'description' => $debt->description ?? 'Historical debt',
+                    'notes' => $debt->notes,
+                ];
+            });
+
         // Calculate filtered totals based on date range
         $filteredTransactionsQuery = $supplier->creditTransactions();
         $filteredPaymentsQuery = $supplier->payments();
+        $filteredDebtsQuery = $supplier->debts();
 
-        // Apply date filters to both transactions and payments
+        // Apply date filters to transactions, payments, and debts
         if ($startDate && $endDate) {
             $filteredTransactionsQuery->whereBetween('transaction_date', [$startDate, $endDate]);
             $filteredPaymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
+            $filteredDebtsQuery->whereBetween('debt_date', [$startDate, $endDate]);
         }
 
-        $filteredTotalOwed = $filteredTransactionsQuery->sum('amount_owed');
+        $filteredHistoricalDebt = $filteredDebtsQuery->sum('amount');
+        $filteredTransactionDebt = $filteredTransactionsQuery->sum('amount_owed');
+        $filteredTotalOwed = $filteredHistoricalDebt + $filteredTransactionDebt;
         $filteredTotalPayments = $filteredPaymentsQuery->sum('payment_amount');
         $filteredOutstanding = max(0, $filteredTotalOwed - $filteredTotalPayments);
         $filteredTransactionsCount = $filteredTransactionsQuery->count();
@@ -326,6 +461,7 @@ class SupplierController extends Controller
             'supplier' => $supplierData,
             'transactions' => $transactions,
             'payments' => $payments,
+            'debts' => $debts,
             'start_date' => $startDate,
             'end_date' => $endDate,
             'products' => $products,

@@ -45,18 +45,38 @@ class Supplier extends Model
         return $this->hasMany(SupplierPayment::class);
     }
 
+    public function debts(): HasMany
+    {
+        return $this->hasMany(SupplierDebt::class);
+    }
+
     // Computed Properties (Calculated from related tables)
     public function getTotalOwedAttribute(): float
     {
-        return $this->creditTransactions()->sum('amount_owed');
+        // Get historical debts
+        $historicalDebt = $this->debts()->sum('amount');
+
+        // Get credit transaction debts
+        $transactionDebt = $this->creditTransactions()->sum('amount_owed');
+
+        return $historicalDebt + $transactionDebt;
     }
 
     public function getTotalOutstandingAttribute(): float
     {
-        $totalTransactions = $this->creditTransactions()->sum('amount_owed');
+        // Get historical debts
+        $historicalDebt = $this->debts()->sum('amount');
+
+        // Get credit transaction debts
+        $transactionDebt = $this->creditTransactions()->sum('amount_owed');
+
+        // Total amount owed to supplier
+        $totalOwed = $historicalDebt + $transactionDebt;
+
+        // Total payments made to supplier
         $totalPayments = $this->payments()->sum('payment_amount');
 
-        return max(0, $totalTransactions - $totalPayments);
+        return max(0, $totalOwed - $totalPayments);
     }
 
     public function getTotalCreditTransactionsAttribute(): int

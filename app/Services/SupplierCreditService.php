@@ -32,11 +32,27 @@ class SupplierCreditService
             // Create transaction items if provided
             if (isset($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $item) {
+                    // If product_id is provided, lookup product to get name and lines_per_carton
+                    $productId = $item['product_id'] ?? null;
+                    $productName = $item['product_name'];
+                    $linesPerCarton = $item['lines_per_carton'] ?? 1;
+
+                    if ($productId) {
+                        $product = \App\Models\Product::find($productId);
+                        if ($product) {
+                            $productName = $product->name;
+                            $linesPerCarton = $product->lines_per_carton ?? 1;
+                        }
+                    }
+
                     $transaction->items()->create([
-                        'product_name' => $item['product_name'],
-                        'quantity' => $item['quantity'],
+                        'product_id' => $productId,
+                        'product_name' => $productName,
+                        'cartons' => $item['cartons'] ?? 0,
+                        'lines' => $item['lines'] ?? 0,
+                        'lines_per_carton' => $linesPerCarton,
                         'unit_price' => $item['unit_price'],
-                        'total_amount' => $item['quantity'] * $item['unit_price'],
+                        // total_amount calculated automatically in model boot()
                     ]);
                 }
             }
@@ -99,8 +115,13 @@ class SupplierCreditService
             'items' => $transaction->items->map(function ($item) {
                 return [
                     'id' => $item->id,
+                    'product_id' => $item->product_id,
                     'product_name' => $item->product_name,
-                    'quantity' => $item->quantity,
+                    'cartons' => $item->cartons,
+                    'lines' => $item->lines,
+                    'lines_per_carton' => $item->lines_per_carton,
+                    'total_quantity' => $item->total_quantity,
+                    'quantity_display' => $item->quantity_display,
                     'unit_price' => $item->unit_price,
                     'total_amount' => $item->total_amount,
                 ];
@@ -129,7 +150,7 @@ class SupplierCreditService
                 $query->where('transaction_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('transaction_date', '=', $transaction->transaction_date)
-            ->where('created_at', '<', $transaction->created_at);
+                            ->where('created_at', '<', $transaction->created_at);
                     });
             });
 
@@ -147,7 +168,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('payment_date', '=', $transaction->transaction_date)
-            ->where('created_at', '<', $transaction->created_at);
+                            ->where('created_at', '<', $transaction->created_at);
                     });
             });
 
@@ -187,7 +208,7 @@ class SupplierCreditService
                 $query->where('transaction_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('transaction_date', '=', $transaction->transaction_date)
-            ->where('created_at', '<=', $transaction->created_at);
+                            ->where('created_at', '<=', $transaction->created_at);
                     });
             });
 
@@ -198,7 +219,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $transaction->transaction_date)
                     ->orWhere(function ($q) use ($transaction) {
                         $q->where('payment_date', '=', $transaction->transaction_date)
-            ->where('created_at', '<=', $transaction->created_at);
+                            ->where('created_at', '<=', $transaction->created_at);
                     });
             });
 
@@ -283,9 +304,14 @@ class SupplierCreditService
 
         // Update transaction items
         if (isset($data['items']) && is_array($data['items'])) {
-            // Calculate new total from items
+            // Calculate new total from items (using cartons/lines structure)
             $newTotal = collect($data['items'])->sum(function ($item) {
-                return $item['quantity'] * $item['unit_price'];
+                $cartons = $item['cartons'] ?? 0;
+                $lines = $item['lines'] ?? 0;
+                $linesPerCarton = $item['lines_per_carton'] ?? 1;
+                $totalQuantity = ($cartons * $linesPerCarton) + $lines;
+
+                return $totalQuantity * $item['unit_price'];
             });
 
             // Delete existing items
@@ -293,11 +319,27 @@ class SupplierCreditService
 
             // Create new items
             foreach ($data['items'] as $item) {
+                // If product_id is provided, lookup product to get name and lines_per_carton
+                $productId = $item['product_id'] ?? null;
+                $productName = $item['product_name'];
+                $linesPerCarton = $item['lines_per_carton'] ?? 1;
+
+                if ($productId) {
+                    $product = \App\Models\Product::find($productId);
+                    if ($product) {
+                        $productName = $product->name;
+                        $linesPerCarton = $product->lines_per_carton ?? 1;
+                    }
+                }
+
                 $transaction->items()->create([
-                    'product_name' => $item['product_name'],
-                    'quantity' => $item['quantity'],
+                    'product_id' => $productId,
+                    'product_name' => $productName,
+                    'cartons' => $item['cartons'] ?? 0,
+                    'lines' => $item['lines'] ?? 0,
+                    'lines_per_carton' => $linesPerCarton,
                     'unit_price' => $item['unit_price'],
-                    'total_amount' => $item['quantity'] * $item['unit_price'],
+                    // total_amount calculated automatically in model boot()
                 ]);
             }
 
@@ -388,7 +430,7 @@ class SupplierCreditService
                 $query->where('payment_date', '<', $payment->payment_date)
                     ->orWhere(function ($q) use ($payment) {
                         $q->where('payment_date', '=', $payment->payment_date)
-            ->where('created_at', '<', $payment->created_at);
+                            ->where('created_at', '<', $payment->created_at);
                     });
             });
 

@@ -16,6 +16,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDate, setSelectedDate] = useState(date || new Date().toISOString().split('T')[0]);
+    const [selectedDebt, setSelectedDebt] = useState(null);
 
     const filteredDebts = outstanding_debts.filter((debt) => debt.customer.toLowerCase().includes(searchQuery.toLowerCase()));
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -28,6 +29,7 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
     const breadcrumbs = [{ title: 'Credit Collection', href: '/credit-collection' }];
 
     function handleCollect(debt) {
+        setSelectedDebt(debt);
         setData({
             customer_id: debt.customer_id,
             amount_collected: '',
@@ -206,6 +208,30 @@ function CreditCollection({ credit_collections = [], outstanding_debts = [], cus
                         <DialogHeader>
                             <DialogTitle>Record Credit Collection</DialogTitle>
                         </DialogHeader>
+
+                        {/* Outstanding Debt Display */}
+                        {selectedDebt && (
+                            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                <div className="mb-2">
+                                    <h4 className="font-semibold text-gray-900">{selectedDebt.customer}</h4>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-700">Outstanding Debt:</span>
+                                        <span className="text-xl font-bold text-orange-600">GH₵{parseFloat(selectedDebt.balance).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">Total Debt:</span>
+                                        <span className="font-medium text-gray-900">GH₵{parseFloat(selectedDebt.total_debt).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">Paid So Far:</span>
+                                        <span className="font-medium text-green-600">GH₵{parseFloat(selectedDebt.amount_paid).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="customer" className="text-right">
