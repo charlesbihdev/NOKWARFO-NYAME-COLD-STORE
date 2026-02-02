@@ -32,6 +32,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
         category: '',
         supplier_id: '',
         lines_per_carton: 1,
+        cost_price_per_carton: '',
     });
 
     const breadcrumbs = [{ title: 'Products', href: '/products' }];
@@ -59,6 +60,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
             category: product.category,
             supplier_id: product.supplier_id ? product.supplier_id.toString() : '',
             lines_per_carton: product.lines_per_carton,
+            cost_price_per_carton: product.cost_price_per_carton || '',
         });
         setIsEditModalOpen(true);
     }
@@ -161,6 +163,28 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                             </SelectContent>
                                         </Select>
                                         {productErrors.lines_per_carton && <InputError message={productErrors.lines_per_carton} className="mt-2" />}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="cost_price_per_carton" className="text-right">
+                                        Cost Price/Carton *
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Input
+                                            id="cost_price_per_carton"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="e.g., 120.00"
+                                            value={productData.cost_price_per_carton}
+                                            onChange={(e) => setProductData('cost_price_per_carton', e.target.value)}
+                                            required
+                                        />
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            The cost price you pay per carton from the supplier
+                                        </p>
+                                        {productErrors.cost_price_per_carton && <InputError message={productErrors.cost_price_per_carton} className="mt-2" />}
                                     </div>
                                 </div>
 
@@ -273,6 +297,27 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="edit-cost_price_per_carton" className="text-right">
+                                    Cost Price/Carton *
+                                </Label>
+                                <div className="col-span-3">
+                                    <Input
+                                        id="edit-cost_price_per_carton"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="e.g., 120.00"
+                                        value={productData.cost_price_per_carton}
+                                        onChange={(e) => setProductData('cost_price_per_carton', e.target.value)}
+                                        required
+                                    />
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        The cost price you pay per carton from the supplier
+                                    </p>
+                                    {productErrors.cost_price_per_carton && <InputError message={productErrors.cost_price_per_carton} className="mt-2" />}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-description" className="text-right">
                                     Description
                                 </Label>
@@ -342,6 +387,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                 <TableRow>
                                     <TableHead>Product Name</TableHead>
                                     <TableHead>Lines per Carton</TableHead>
+                                    <TableHead>Cost Price/Carton</TableHead>
                                     <TableHead>Category</TableHead>
                                     {/* <TableHead>Supplier</TableHead> */}
                                     <TableHead>Status</TableHead>
@@ -353,6 +399,11 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                     <TableRow key={product.id}>
                                         <TableCell className="font-medium">{product.name}</TableCell>
                                         <TableCell>{product.lines_per_carton}</TableCell>
+                                        <TableCell className={!product.cost_price_per_carton ? 'text-orange-600' : ''}>
+                                            {product.cost_price_per_carton
+                                                ? `GH₵${parseFloat(product.cost_price_per_carton).toFixed(2)}`
+                                                : 'Not set'}
+                                        </TableCell>
                                         <TableCell>{product.category}</TableCell>
                                         {/* <TableCell>{product.supplier?.name || 'N/A'}</TableCell> */}
                                         <TableCell>
@@ -374,7 +425,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                 ))}
                                 {products.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
+                                        <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                                             No products found. Add your first product to get started.
                                         </TableCell>
                                     </TableRow>

@@ -19,8 +19,8 @@ class SalesTransactionController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $startDate = $request->input('start_date') ?? now()->subDays(30)->toDateString(); // 31 days ago (today - 2)
-        $endDate = $request->input('end_date') ?? now()->toDateString(); // today
+        $startDate = $request->input('start_date') ?? now()->toDateString();
+        $endDate = $request->input('end_date') ?? now()->toDateString();
 
         $query = Sale::with(['customer', 'saleItems.product'])
             ->whereDate('created_at', '>=', $startDate)
@@ -125,7 +125,7 @@ class SalesTransactionController extends Controller
             // Calculate available stock using adjustment-aware logic (same as StockControlController)
             // Step 1: Check if there's a [set:available] adjustment on the transaction date
             $lastSetAvailable = $product->stockMovements()
-                ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                 ->where(function ($q) {
                     $q->where('type', 'adjustment_in')
                         ->orWhere('type', 'adjustment_out');
@@ -141,12 +141,12 @@ class SalesTransactionController extends Controller
                 // Scenario A: Adjustment exists - use adjustment logic
                 // Calculate baseline before date (excluding [set:available] tags)
                 $receivedBefore = $product->stockMovements()
-                    ->where('created_at', '<', $transactionDate.' 00:00:00')
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
                     ->where('type', 'received')
                     ->sum('quantity');
 
                 $adjustmentsInBefore = $product->stockMovements()
-                    ->where('created_at', '<', $transactionDate.' 00:00:00')
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
                     ->where('type', 'adjustment_in')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -155,7 +155,7 @@ class SalesTransactionController extends Controller
                     ->sum('quantity');
 
                 $adjustmentsOutBefore = $product->stockMovements()
-                    ->where('created_at', '<', $transactionDate.' 00:00:00')
+                    ->where('created_at', '<', $transactionDate . ' 00:00:00')
                     ->where('type', 'adjustment_out')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -167,13 +167,13 @@ class SalesTransactionController extends Controller
 
                 // Get [set:available] adjustment value
                 $setAvailableIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('notes', 'like', '%[set:available]%')
                     ->sum('quantity');
 
                 $setAvailableOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('notes', 'like', '%[set:available]%')
                     ->sum('quantity');
@@ -182,20 +182,20 @@ class SalesTransactionController extends Controller
 
                 // Add stock received on transaction date (only AFTER adjustment)
                 $stockReceivedAfter = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'received')
                     ->where('created_at', '>', $lastAdjustmentTimestamp)
                     ->sum('quantity');
 
                 // Add [set:received] adjustments
                 $setReceivedIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
 
                 $setReceivedOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
@@ -204,7 +204,7 @@ class SalesTransactionController extends Controller
 
                 // Add normal adjustments on transaction date (only AFTER adjustment)
                 $adjustmentsInToday = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('created_at', '>', $lastAdjustmentTimestamp)
                     ->where(function ($q) {
@@ -217,7 +217,7 @@ class SalesTransactionController extends Controller
                     ->sum('quantity');
 
                 $adjustmentsOutToday = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('created_at', '>', $lastAdjustmentTimestamp)
                     ->where(function ($q) {
@@ -244,12 +244,12 @@ class SalesTransactionController extends Controller
 
                 // Calculate previous day's baseline (without [set:available])
                 $receivedBeforePrevious = $product->stockMovements()
-                    ->where('created_at', '<', $previousDate.' 00:00:00')
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
                     ->where('type', 'received')
                     ->sum('quantity');
 
                 $adjustmentsInBeforePrevious = $product->stockMovements()
-                    ->where('created_at', '<', $previousDate.' 00:00:00')
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
                     ->where('type', 'adjustment_in')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -258,7 +258,7 @@ class SalesTransactionController extends Controller
                     ->sum('quantity');
 
                 $adjustmentsOutBeforePrevious = $product->stockMovements()
-                    ->where('created_at', '<', $previousDate.' 00:00:00')
+                    ->where('created_at', '<', $previousDate . ' 00:00:00')
                     ->where('type', 'adjustment_out')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -270,13 +270,13 @@ class SalesTransactionController extends Controller
 
                 // Previous day's [set:available] adjustments
                 $previousDaySetAvailableIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('notes', 'like', '%[set:available]%')
                     ->sum('quantity');
 
                 $previousDaySetAvailableOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('notes', 'like', '%[set:available]%')
                     ->sum('quantity');
@@ -285,18 +285,18 @@ class SalesTransactionController extends Controller
 
                 // Previous day's Stock Received
                 $previousDayReceived = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'received')
                     ->sum('quantity');
 
                 $previousDaySetReceivedIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
 
                 $previousDaySetReceivedOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
@@ -305,7 +305,7 @@ class SalesTransactionController extends Controller
 
                 // Previous day's regular adjustments
                 $previousDayAdjustmentsIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -317,7 +317,7 @@ class SalesTransactionController extends Controller
                     ->sum('quantity');
 
                 $previousDayAdjustmentsOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$previousDate.' 00:00:00', $previousDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$previousDate . ' 00:00:00', $previousDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -341,18 +341,18 @@ class SalesTransactionController extends Controller
 
                 // Add today's movements
                 $stockReceivedToday = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'received')
                     ->sum('quantity');
 
                 $setReceivedIn = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
 
                 $setReceivedOut = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where('notes', 'like', '%[set:received]%')
                     ->sum('quantity');
@@ -360,7 +360,7 @@ class SalesTransactionController extends Controller
                 $stockReceivedDisplay = $stockReceivedToday + ($setReceivedIn - $setReceivedOut);
 
                 $adjustmentsInToday = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_in')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -372,7 +372,7 @@ class SalesTransactionController extends Controller
                     ->sum('quantity');
 
                 $adjustmentsOutToday = $product->stockMovements()
-                    ->whereBetween('created_at', [$transactionDate.' 00:00:00', $transactionDate.' 23:59:59'])
+                    ->whereBetween('created_at', [$transactionDate . ' 00:00:00', $transactionDate . ' 23:59:59'])
                     ->where('type', 'adjustment_out')
                     ->where(function ($q) {
                         $q->whereNull('notes')
@@ -411,34 +411,19 @@ class SalesTransactionController extends Controller
         }
         unset($item); // break reference
 
-        // Calculate unit_cost_price using FIFO and quantity needed
+        // Calculate unit_cost_price from product's cost_price_per_carton and profit
         $itemsWithCosts = collect($validated['items'])->map(function ($item) use ($products) {
-            $qtyNeeded = $item['qty']; // in lines
             $product = $products[$item['product_id']];
+            $linesPerCarton = $product->lines_per_carton ?? 1;
 
-            $stockMovements = StockMovement::where('product_id', $item['product_id'])
-                ->where('type', 'received')
-                ->where('quantity', '>', 0)
-                ->orderBy('created_at')
-                ->get();
+            // Get cost price per carton from product, convert to per line
+            $costPricePerCarton = $product->cost_price_per_carton ?? 0;
+            $costPricePerLine = $linesPerCarton > 0 ? $costPricePerCarton / $linesPerCarton : 0;
 
-            $totalCost = 0;
-            foreach ($stockMovements as $movement) {
-                if ($qtyNeeded <= 0) {
-                    break;
-                }
+            $item['unit_cost_price'] = $costPricePerLine;
 
-                $qtyToUse = min($movement->quantity, $qtyNeeded);
-                $totalCost += $qtyToUse * $movement->unit_cost; // unit_cost is per line
-                $qtyNeeded -= $qtyToUse;
-            }
-
-            if ($qtyNeeded > 0) {
-                // Not enough stock, fallback handled by validation but fallback cost is 0
-                $item['unit_cost_price'] = 0;
-            } else {
-                $item['unit_cost_price'] = $totalCost / $item['qty'];
-            }
+            // Calculate profit: (selling - cost) × qty (all per-line values)
+            $item['profit'] = ($item['unit_selling_price'] - $costPricePerLine) * $item['qty'];
 
             return $item;
         });
@@ -467,7 +452,7 @@ class SalesTransactionController extends Controller
         }
 
         $saleData = [
-            'transaction_id' => 'TXN'.time(),
+            'transaction_id' => 'TXN' . time(),
             'customer_id' => $validated['customer_id'] ?? null,
             'customer_name' => $validated['customer_id'] ? null : $validated['customer_name'],
             'subtotal' => $subtotal,
@@ -484,7 +469,7 @@ class SalesTransactionController extends Controller
         // Update the created_at to reflect the transaction date with current time
         // This ensures sales have unique timestamps and can be filtered correctly
         // when stock adjustments are made (sales after adjustment should count)
-        $transactionDateTime = $validated['transaction_date'].' '.now()->format('H:i:s');
+        $transactionDateTime = $validated['transaction_date'] . ' ' . now()->format('H:i:s');
         $sale->created_at = $transactionDateTime;
         $sale->save();
 
@@ -501,6 +486,7 @@ class SalesTransactionController extends Controller
                 'unit_selling_price' => $item['unit_selling_price'], // per line
                 'unit_cost_price' => $item['unit_cost_price'], // per line
                 'total' => $item['total'],
+                'profit' => $item['profit'],
             ]);
 
             // Build sale items for receipt
@@ -582,16 +568,24 @@ class SalesTransactionController extends Controller
             // Convert unit_selling_price (per carton) to per line for storage
             $unitPricePerLine = $item['unit_selling_price'] / $linesPerCarton;
 
+            // Get cost price per carton from product, convert to per line
+            $costPricePerCarton = $product->cost_price_per_carton ?? 0;
+            $costPricePerLine = $linesPerCarton > 0 ? $costPricePerCarton / $linesPerCarton : 0;
+
             // Recalculate total
             $total = $unitPricePerLine * $item['qty'];
+
+            // Calculate profit
+            $profit = ($unitPricePerLine - $costPricePerLine) * $item['qty'];
 
             return [
                 'product_id' => $item['product_id'],
                 'product_name' => $product->name,
                 'quantity' => $item['qty'],
                 'unit_selling_price' => $unitPricePerLine,
-                'unit_cost_price' => 0, // We don't recalculate FIFO cost on edit
+                'unit_cost_price' => $costPricePerLine,
                 'total' => $total,
+                'profit' => $profit,
             ];
         });
 
@@ -646,6 +640,7 @@ class SalesTransactionController extends Controller
                 'unit_selling_price' => $item['unit_selling_price'],
                 'unit_cost_price' => $item['unit_cost_price'],
                 'total' => $item['total'],
+                'profit' => $item['profit'],
             ]);
         }
 

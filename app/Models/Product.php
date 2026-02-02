@@ -15,6 +15,7 @@ class Product extends Model
         'name',
         'description',
         'lines_per_carton',
+        'cost_price_per_carton',
         'category',
         'default_selling_price',
         'default_cost_price',
@@ -22,11 +23,17 @@ class Product extends Model
         'is_active',
     ];
 
-    protected $casts = [
-        'cost_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
-        'is_active' => 'boolean',
-    ];
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'lines_per_carton' => 'integer',
+            'cost_price_per_carton' => 'decimal:2',
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function supplier(): BelongsTo
     {

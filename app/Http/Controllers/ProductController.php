@@ -25,6 +25,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'lines_per_carton' => 'required|integer|min:1|max:8',
+            'cost_price_per_carton' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:1000',
             'category' => 'required|string|max:255',
             // 'supplier_id' => 'required|exists:suppliers,id',
@@ -43,6 +44,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'lines_per_carton' => 'required|integer|min:1|max:8',
+            'cost_price_per_carton' => 'required|numeric|min:0',
             'description' => 'nullable|string|max:1000',
             'category' => 'required|string|max:255',
             // 'supplier_id' => 'required|exists:suppliers,id',
