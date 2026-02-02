@@ -10,11 +10,23 @@ use Inertia\Inertia;
 
 class CustomerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::with(['sales', 'creditCollections'])
-            ->orderByDesc('created_at')
-            ->get()
+        $search = $request->input('search');
+
+        $query = Customer::with(['sales', 'creditCollections'])
+            ->orderByDesc('created_at');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->get()
             ->map(function ($customer) {
                 return [
                     'id' => $customer->id,
@@ -34,6 +46,9 @@ class CustomerController extends Controller
 
         return Inertia::render('customers', [
             'customers' => $customers,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 

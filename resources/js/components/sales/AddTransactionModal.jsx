@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { Search, User, X, ChevronDown } from 'lucide-react';
 
 export default function AddTransactionModal({
     open,
@@ -20,7 +21,48 @@ export default function AddTransactionModal({
     paymentType,
     setPaymentType,
     runningTotal,
+    onSaleSuccess,
 }) {
+    // Customer search state
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+    const customerDropdownRef = useRef(null);
+
+    // Filter customers based on search
+    const filteredCustomers = useMemo(() => {
+        if (!customerSearch.trim()) return customers.slice(0, 10);
+        const q = customerSearch.toLowerCase();
+        return customers.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            (c.phone && c.phone.includes(customerSearch))
+        ).slice(0, 10);
+    }, [customerSearch, customers]);
+
+    // Get selected customer name for display
+    const selectedCustomer = useMemo(() => {
+        if (!form.data.customer_id) return null;
+        return customers.find(c => String(c.id) === String(form.data.customer_id));
+    }, [form.data.customer_id, customers]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target)) {
+                setCustomerDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Reset search when modal closes
+    useEffect(() => {
+        if (!open) {
+            setCustomerSearch('');
+            setCustomerDropdownOpen(false);
+        }
+    }, [open]);
+
     useEffect(() => {
         form.setData('items', items);
     }, [items]);
@@ -149,7 +191,16 @@ export default function AddTransactionModal({
                             return;
                         }
                         form.post('/sales-transactions', {
-                            onSuccess: () => onClose(),
+                            onSuccess: (page) => {
+                                // Find the most recent sale from updated props (same pattern as CustomerTransactions)
+                                if (page.props.sales_transactions?.data && onSaleSuccess) {
+                                    const mostRecentSale = page.props.sales_transactions.data[0]; // First one is most recent (ordered by created_at desc)
+                                    if (mostRecentSale) {
+                                        onSaleSuccess(mostRecentSale);
+                                    }
+                                }
+                                onClose();
+                            },
                         });
                     }}
                     className="space-y-4"
@@ -170,41 +221,94 @@ export default function AddTransactionModal({
                     <div>
                         <label className="mb-1 block font-medium">
                             Customer {(paymentType === 'credit' || paymentType === 'partial') && <span className="text-red-500">*</span>}
-                            <div className="flex gap-2">
-                                <Select
-                                    value={form.data.customer_id ? String(form.data.customer_id) : 'none'}
-                                    onValueChange={(v) => {
-                                        if (v === 'none') {
-                                            form.setData('customer_id', null);
-                                        } else {
-                                            form.setData('customer_id', v);
-                                            form.setData('customer_name', '');
-                                        }
-                                    }}
+                        </label>
+                        <div className="flex gap-2">
+                            {/* Searchable Customer Dropdown */}
+                            <div className="relative flex-1" ref={customerDropdownRef}>
+                                <div
+                                    className={`flex items-center gap-2 w-full border rounded-md px-3 py-2 cursor-pointer bg-background ${
+                                        (paymentType === 'credit' || paymentType === 'partial') && !form.data.customer_id
+                                            ? 'border-orange-500'
+                                            : 'border-input'
+                                    }`}
+                                    onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
                                 >
-                                    <SelectTrigger className={(paymentType === 'credit' || paymentType === 'partial') ? 'border-orange-500' : ''}>
-                                        <SelectValue placeholder="Select customer" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {paymentType === 'cash' && <SelectItem value="none">-- No customer selected --</SelectItem>}
-                                        {customers.map((c) => (
-                                            <SelectItem key={c.id} value={String(c.id)}>
-                                                {c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span className={`flex-1 truncate ${!selectedCustomer ? 'text-muted-foreground' : ''}`}>
+                                        {selectedCustomer ? selectedCustomer.name : 'Search customers...'}
+                                    </span>
+                                    {selectedCustomer ? (
+                                        <X
+                                            className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                form.setData('customer_id', null);
+                                                setCustomerSearch('');
+                                            }}
+                                        />
+                                    ) : (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    )}
+                                </div>
 
-                                {!form.data.customer_id && paymentType === 'cash' && (
-                                    <Input
-                                        type="text"
-                                        placeholder="Or enter customer name"
-                                        value={form.data.customer_name}
-                                        onChange={(e) => form.setData('customer_name', e.target.value)}
-                                    />
+                                {/* Dropdown */}
+                                {customerDropdownOpen && (
+                                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
+                                        {/* Search Input */}
+                                        <div className="flex items-center gap-2 p-2 border-b">
+                                            <Search className="h-4 w-4 text-muted-foreground" />
+                                            <input
+                                                type="text"
+                                                placeholder="Type to search..."
+                                                value={customerSearch}
+                                                onChange={(e) => setCustomerSearch(e.target.value)}
+                                                className="flex-1 bg-transparent border-0 outline-none text-sm"
+                                                autoFocus
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
+
+                                        {/* Results List */}
+                                        <div className="max-h-48 overflow-y-auto p-1">
+                                            {filteredCustomers.length === 0 ? (
+                                                <div className="p-3 text-center text-sm text-muted-foreground">
+                                                    No customers found
+                                                </div>
+                                            ) : (
+                                                filteredCustomers.map((customer) => (
+                                                    <div
+                                                        key={customer.id}
+                                                        className={`flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-accent ${
+                                                            String(form.data.customer_id) === String(customer.id) ? 'bg-accent' : ''
+                                                        }`}
+                                                        onClick={() => {
+                                                            form.setData('customer_id', String(customer.id));
+                                                            form.setData('customer_name', '');
+                                                            setCustomerDropdownOpen(false);
+                                                            setCustomerSearch('');
+                                                        }}
+                                                    >
+                                                        <User className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="flex-1 truncate">{customer.name}</span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-                        </label>
+
+                            {/* Custom name input for cash sales without customer selected */}
+                            {!form.data.customer_id && paymentType === 'cash' && (
+                                <Input
+                                    type="text"
+                                    placeholder="Or enter customer name"
+                                    value={form.data.customer_name}
+                                    onChange={(e) => form.setData('customer_name', e.target.value)}
+                                    className="flex-1"
+                                />
+                            )}
+                        </div>
 
                         {/* Warning for credit/partial sales */}
                         {(paymentType === 'credit' || paymentType === 'partial') && !form.data.customer_id && (

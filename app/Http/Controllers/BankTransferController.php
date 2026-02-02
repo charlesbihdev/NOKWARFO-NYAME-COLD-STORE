@@ -55,7 +55,7 @@ class BankTransferController extends Controller
                 ];
             });
 
-        $tags = BankTransferTag::orderBy('name')->get();
+        $tags = BankTransferTag::withCount('bankTransfers')->orderBy('name')->get();
 
         $lastBalance = BankTransfer::latest()->value('current_balance') ?? 0;
 

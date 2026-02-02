@@ -7,11 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { CreditCard, Edit, Mail, MapPin, Phone, Plus, Trash2, Users, History, DollarSign, AlertTriangle } from 'lucide-react';
-import { useState } from 'react';
+import { debounce } from 'lodash';
+import { CreditCard, Edit, Mail, MapPin, Phone, Plus, Search, Trash2, Users, History, DollarSign, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 function Customers() {
-    const { customers = [] } = usePage().props;
+    const { customers = [], filters = {} } = usePage().props;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState(null);
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -21,6 +22,24 @@ function Customers() {
         address: '',
     });
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(filters.search || '');
+
+    // Debounced search
+    const debouncedSearch = useCallback(
+        debounce((search) => {
+            router.get(
+                route('customers.index'),
+                { search: search || undefined },
+                { preserveState: true, preserveScroll: true, replace: true },
+            );
+        }, 400),
+        [],
+    );
+
+    // Trigger search when searchTerm changes
+    useEffect(() => {
+        debouncedSearch(searchTerm);
+    }, [searchTerm, debouncedSearch]);
 
     const breadcrumbs = [{ title: 'Customers', href: '/customers' }];
 
@@ -179,6 +198,17 @@ function Customers() {
                             <Users className="h-5 w-5" />
                             Customer Directory
                         </CardTitle>
+                        <div className="mt-4 flex items-center space-x-2">
+                            <div className="relative flex-1 max-w-md">
+                                <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
+                                <Input
+                                    placeholder="Search by name, phone, email, or address..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-8"
+                                />
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -257,6 +287,11 @@ function Customers() {
                                 })}
                             </TableBody>
                         </Table>
+                        {customers.length === 0 && (
+                            <div className="text-muted-foreground py-8 text-center">
+                                {searchTerm ? 'No customers found matching your search.' : 'No customers found.'}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(grep:*)",
       "Bash(php artisan make:migration:*)",
-      "Bash(vendor/bin/pint:*)"
+      "Bash(vendor/bin/pint:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

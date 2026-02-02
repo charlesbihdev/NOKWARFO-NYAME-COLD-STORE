@@ -18,6 +18,17 @@ class BankTransferTagController extends Controller
         return back()->with('success', 'Tag created successfully.');
     }
 
+    public function update(Request $request, BankTransferTag $tag)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:bank_transfer_tags,name,'.$tag->id,
+        ]);
+
+        $tag->update($validated);
+
+        return back()->with('success', 'Tag updated successfully.');
+    }
+
     public function destroy(BankTransferTag $tag)
     {
         $tag->delete();

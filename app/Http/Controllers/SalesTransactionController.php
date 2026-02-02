@@ -488,19 +488,55 @@ class SalesTransactionController extends Controller
         $sale->created_at = $transactionDateTime;
         $sale->save();
 
+        $saleItems = [];
         foreach ($itemsWithCosts as $item) {
+            $product = $products[$item['product_id']];
+            $linesPerCarton = $product->lines_per_carton ?? 1;
+
             SaleItem::create([
                 'sale_id' => $sale->id,
                 'product_id' => $item['product_id'],
-                'product_name' => $products[$item['product_id']]->name,
+                'product_name' => $product->name,
                 'quantity' => $item['qty'], // lines
                 'unit_selling_price' => $item['unit_selling_price'], // per line
                 'unit_cost_price' => $item['unit_cost_price'], // per line
                 'total' => $item['total'],
             ]);
+
+            // Build sale items for receipt
+            $saleItems[] = [
+                'product' => $product->name,
+                'quantity' => StockHelper::formatCartonLine($item['qty'], $linesPerCarton),
+                'unit_selling_price' => StockHelper::pricePerCarton($item['unit_selling_price'], $linesPerCarton),
+                'total' => $item['total'],
+            ];
         }
 
-        return redirect()->route('sales-transactions.index')->with('success', 'Sales transaction created successfully.');
+        // Get customer name for receipt
+        $customerName = null;
+        if (! empty($validated['customer_id'])) {
+            $customer = Customer::find($validated['customer_id']);
+            $customerName = $customer ? $customer->name : null;
+        } else {
+            $customerName = $validated['customer_name'] ?? null;
+        }
+
+        // Build created sale data for receipt modal
+        $createdSale = [
+            'id' => $sale->transaction_id,
+            'date' => $sale->created_at->format('Y-m-d'),
+            'customer' => $customerName,
+            'total' => $total,
+            'payment_type' => ucfirst($validated['payment_type']),
+            'status' => $validated['payment_type'] === 'cash' ? 'Completed' : ucfirst($validated['payment_type']),
+            'amount_paid' => $amount_paid,
+            'amount_owed' => $total - $amount_paid,
+            'sale_items' => $saleItems,
+        ];
+
+        return redirect()->route('sales-transactions.index')
+            ->with('success', 'Sales transaction created successfully.')
+            ->with('createdSale', $createdSale);
     }
 
     public function update(Request $request, $transaction_id)
