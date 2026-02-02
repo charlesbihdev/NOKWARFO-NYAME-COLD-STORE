@@ -13,8 +13,8 @@ class ProfitAnalysisController extends Controller
 {
     public function index(Request $request): Response
     {
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
+        $startDate = $request->query('start_date') ?? now()->toDateString();
+        $endDate = $request->query('end_date') ?? now()->toDateString();
 
         // Base date filter closure
         $saleDateFilter = function ($query) use ($startDate, $endDate) {
@@ -81,7 +81,7 @@ class ProfitAnalysisController extends Controller
                 $linesPerCarton = $product->lines_per_carton ?? 1;
 
                 $totalQty = $items->sum('quantity');
-                $totalCost = $items->sum(fn ($i) => $i->unit_cost_price * $i->quantity);
+                $totalCost = $items->sum(fn($i) => $i->unit_cost_price * $i->quantity);
                 $totalAmount = $items->sum('total');
                 $totalProfit = $items->sum('profit');
 
