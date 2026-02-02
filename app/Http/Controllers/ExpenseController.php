@@ -10,8 +10,8 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
+        $startDate = $request->query('start_date') ?? now()->toDateString();
+        $endDate = $request->query('end_date') ?? now()->toDateString();
         $typeFilter = $request->query('type_filter');
 
         $query = Expense::query();

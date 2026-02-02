@@ -17,14 +17,22 @@ class SaleItem extends Model
         'unit_selling_price',
         'unit_cost_price',
         'total',
+        'profit',
     ];
 
-    protected $casts = [
-        'quantity' => 'integer',
-        'unit_selling_price' => 'decimal:2',
-        'unit_cost_price' => 'decimal:2',
-        'total' => 'decimal:2',
-    ];
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'integer',
+            'unit_selling_price' => 'decimal:2',
+            'unit_cost_price' => 'decimal:2',
+            'total' => 'decimal:2',
+            'profit' => 'decimal:2',
+        ];
+    }
 
     public function sale()
     {

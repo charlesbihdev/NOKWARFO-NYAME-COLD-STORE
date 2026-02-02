@@ -4,17 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Helpers\StockHelper;
 use App\Models\Product;
-use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Models\StockMovement;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProfitAnalysisController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
@@ -29,38 +26,19 @@ class ProfitAnalysisController extends Controller
             }
         };
 
-        /** ---------------------------
-         *  ALL SALES (cash, credit, partial)
-         * -------------------------- */
-        $total_product_sales = SaleItem::whereHas('sale', $saleDateFilter)
-            ->with(['sale', 'product'])
-            ->get()
-            ->groupBy('product_id')
-            ->map(function ($items) {
-                $totalQty = $items->sum('quantity');
-                $totalRevenue = $items->sum(fn ($item) => ($item->unit_selling_price ?? 0) * $item->quantity);
-                $totalCost = $items->sum(fn ($item) => ($item->unit_cost_price ?? 0) * $item->quantity);
-                $avgUnitSellingPrice = $totalQty > 0 ? $totalRevenue / $totalQty : 0;
-                $avgUnitCostPrice = $totalQty > 0 ? $totalCost / $totalQty : 0;
+        // Count excluded sales (items with no cost data)
+        $excludedCount = SaleItem::whereHas('sale', $saleDateFilter)
+            ->where(function ($q) {
+                $q->where('unit_cost_price', '<=', 0)
+                    ->orWhereNull('unit_cost_price');
+            })
+            ->count();
 
-                $product = $items->first()->product;
+        // ALL SALES (cash, credit, partial) - only items with cost data
+        $total_product_sales = $this->getProductSalesData($saleDateFilter, null);
 
-                return [
-                    'product' => $product->name ?? $items->first()->product_name,
-                    'total_product_sold' => StockHelper::formatCartonLine($totalQty, $product->lines_per_carton),
-                    'unit_cost_price' => StockHelper::pricePerCarton($avgUnitCostPrice, $product->lines_per_carton),
-                    'unit_selling_price' => StockHelper::pricePerCarton($avgUnitSellingPrice, $product->lines_per_carton),
-                    'total_cost_amount' => $totalCost,
-                    'selling_price' => StockHelper::pricePerCarton($avgUnitSellingPrice, $product->lines_per_carton),
-                    'total_amount' => $totalRevenue,
-                    'profit' => $totalRevenue - $totalCost,
-                ];
-            })->values();
-
-        /** ---------------------------
-         *  CASH-ONLY SALES
-         * -------------------------- */
-        $paid_product_sales = SaleItem::whereHas('sale', function ($query) use ($startDate, $endDate) {
+        // CASH-ONLY SALES - only items with cost data
+        $paid_product_sales = $this->getProductSalesData(function ($query) use ($startDate, $endDate) {
             $query->where('payment_type', 'cash');
             if ($startDate) {
                 $query->whereDate('created_at', '>=', $startDate);
@@ -68,197 +46,102 @@ class ProfitAnalysisController extends Controller
             if ($endDate) {
                 $query->whereDate('created_at', '<=', $endDate);
             }
+        }, 'cash');
+
+        // Count items that can be recalculated (have product with cost_price_per_carton but item has no profit)
+        $recalculatableCount = SaleItem::where(function ($q) {
+            $q->where('profit', 0)
+                ->orWhereNull('profit');
         })
-            ->with(['sale', 'product'])
-            ->get()
-            ->groupBy('product_id')
-            ->map(function ($items) {
-                $totalQty = $items->sum('quantity');
-                $totalRevenue = $items->sum(fn ($item) => ($item->unit_selling_price ?? 0) * $item->quantity);
-                $totalCost = $items->sum(fn ($item) => ($item->unit_cost_price ?? 0) * $item->quantity);
-                $avgUnitCostPrice = $totalQty > 0 ? $totalCost / $totalQty : 0;
-                $avgUnitSellingPrice = $totalQty > 0 ? $totalRevenue / $totalQty : 0;
-
-                $product = $items->first()->product;
-
-                return [
-                    'product' => $product->name ?? $items->first()->product_name,
-                    'total_product_sold' => StockHelper::formatCartonLine($totalQty, $product->lines_per_carton),
-                    'unit_cost_price' => StockHelper::pricePerCarton($avgUnitCostPrice, $product->lines_per_carton),
-                    'unit_selling_price' => StockHelper::pricePerCarton($avgUnitSellingPrice, $product->lines_per_carton),
-                    'total_cost_amount' => $totalCost,
-                    'selling_price' => StockHelper::pricePerCarton($avgUnitSellingPrice, $product->lines_per_carton),
-                    'total_amount' => $totalRevenue,
-                    'profit' => $totalRevenue - $totalCost,
-                ];
-            })->values();
+            ->whereHas('product', function ($q) {
+                $q->where('cost_price_per_carton', '>', 0);
+            })
+            ->count();
 
         return Inertia::render('profit-analysis', [
             'total_product_sales' => $total_product_sales,
             'paid_product_sales' => $paid_product_sales,
+            'excluded_count' => $excludedCount,
+            'recalculatable_count' => $recalculatableCount,
         ]);
     }
 
-    // Other methods (store, destroy) remain unchanged from your last provided version
-    public function store(Request $request)
+    /**
+     * Get product sales data grouped by product.
+     */
+    private function getProductSalesData(callable $saleFilter, ?string $paymentType): \Illuminate\Support\Collection
     {
-        $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'customer_name' => 'nullable|string|max:255',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty' => 'required|integer|min:1',
-            'items.*.unit_selling_price' => 'required|numeric|min:0',
-            'items.*.total' => 'required|numeric|min:0',
-            'amount_paid' => 'required|numeric|min:0',
-            'payment_type' => 'required|in:cash,credit,partial',
-        ]);
+        return SaleItem::whereHas('sale', $saleFilter)
+            ->where('unit_cost_price', '>', 0)
+            ->with('product')
+            ->get()
+            ->groupBy('product_id')
+            ->map(function ($items) {
+                $product = $items->first()->product;
+                $linesPerCarton = $product->lines_per_carton ?? 1;
 
-        if (! isset($validated['customer_id']) && empty($validated['customer_name'])) {
-            return redirect()->back()->withErrors(['customer_id' => 'Either customer ID or customer name must be provided.'])->withInput();
-        }
+                $totalQty = $items->sum('quantity');
+                $totalCost = $items->sum(fn ($i) => $i->unit_cost_price * $i->quantity);
+                $totalAmount = $items->sum('total');
+                $totalProfit = $items->sum('profit');
 
-        // Validate stock availability
-        foreach ($validated['items'] as $item) {
-            $product = Product::find($item['product_id']);
+                // Calculate average prices per line, then convert to per carton for display
+                $avgCostPerLine = $totalQty > 0 ? $totalCost / $totalQty : 0;
+                $avgSellingPerLine = $totalQty > 0 ? $totalAmount / $totalQty : 0;
 
-            $incoming = $product->stockMovements()
-                ->where('type', 'received')
-                ->sum('quantity');
-
-            $sold = $product->stockMovements()
-                ->where('type', 'sold')
-                ->sum('quantity');
-
-            $availableStock = $incoming - $sold;
-
-            if ($availableStock < $item['qty']) {
-                return redirect()->back()->withErrors([
-                    'items' => "Insufficient stock for product ID {$item['product_id']}. Available: {$availableStock}, Requested: {$item['qty']}",
-                ])->withInput();
-            }
-        }
-
-        // Calculate unit_cost_price using FIFO
-        $itemsWithCosts = collect($validated['items'])->map(function ($item) {
-            $qtyNeeded = $item['qty'];
-            $stockMovements = StockMovement::where('product_id', $item['product_id'])
-                ->where('type', 'received')
-                ->where('quantity', '>', 0)
-                ->orderBy('created_at')
-                ->get();
-
-            $totalCost = 0;
-            $allocatedQty = 0;
-
-            foreach ($stockMovements as $movement) {
-                if ($qtyNeeded <= 0) {
-                    break;
-                }
-
-                $qtyToUse = min($movement->quantity, $qtyNeeded);
-                $totalCost += $qtyToUse * $movement->unit_cost;
-                $qtyNeeded -= $qtyToUse;
-
-                // Update stock movement quantity
-                // $movement->quantity -= $qtyToUse;
-                // $movement->save();
-            }
-
-            if ($qtyNeeded > 0) {
-                // Fallback if insufficient stock (should be caught by validation)
-                $item['unit_cost_price'] = 0;
-            } else {
-                $item['unit_cost_price'] = $totalCost / $item['qty'];
-            }
-
-            return $item;
-        });
-
-        $subtotal = $itemsWithCosts->sum('total');
-        $total = $subtotal; // Add tax/discount logic if needed
-        $amount_paid = $validated['amount_paid'];
-
-        // Validate payment logic
-        $validator = Validator::make($request->all(), []);
-        $validator->after(function ($validator) use ($amount_paid, $total, $validated) {
-            $type = $validated['payment_type'];
-            if ($type === 'cash' && $amount_paid != $total) {
-                $validator->errors()->add('amount_paid', 'For cash payments, the amount paid must equal the total.');
-            }
-            if ($type === 'credit' && $amount_paid != 0) {
-                $validator->errors()->add('amount_paid', 'For credit sales, the amount paid must be 0.');
-            }
-            if ($type === 'partial' && ($amount_paid <= 0 || $amount_paid >= $total)) {
-                $validator->errors()->add('amount_paid', 'For partial payments, the amount paid must be greater than 0 and less than the total.');
-            }
-        });
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $saleData = [
-            'transaction_id' => 'TXN'.time(),
-            'customer_id' => $validated['customer_id'],
-            'subtotal' => $subtotal,
-            'tax' => 0,
-            'total' => $total,
-            'payment_type' => $validated['payment_type'],
-            'status' => 'completed', // All successful transactions are completed
-            'amount_paid' => $amount_paid,
-            'user_id' => Auth::user()->id ?? 1,
-        ];
-
-        if (isset($validated['customer_name']) && empty($validated['customer_id'])) {
-            $saleData['customer_name'] = $validated['customer_name'];
-        }
-
-        $sale = Sale::create($saleData);
-
-        foreach ($itemsWithCosts as $item) {
-            SaleItem::create([
-                'sale_id' => $sale->id,
-                'product_id' => $item['product_id'],
-                'product_name' => Product::find($item['product_id'])->name,
-                'quantity' => $item['qty'],
-                'unit_selling_price' => $item['unit_selling_price'],
-                'unit_cost_price' => $item['unit_cost_price'],
-                'total' => $item['total'],
-            ]);
-
-            // Create stock movement for sold items
-            StockMovement::create([
-                'product_id' => $item['product_id'],
-                'type' => 'sold',
-                'quantity' => $item['qty'], // Positive quantity, as 'sold' implies reduction
-                'unit_cost' => $item['unit_cost_price'],
-                'total_cost' => $item['qty'] * $item['unit_cost_price'],
-                'sale_id' => $sale->id,
-            ]);
-        }
-
-        return redirect()->route('sales-transactions.index')->with('success', 'Sales transaction created successfully.');
+                return [
+                    'product' => $product->name ?? $items->first()->product_name,
+                    'units_sold' => StockHelper::formatCartonLine($totalQty, $linesPerCarton),
+                    'cost_price' => StockHelper::pricePerCarton($avgCostPerLine, $linesPerCarton),
+                    'total_cost' => $totalCost,
+                    'selling_price' => StockHelper::pricePerCarton($avgSellingPerLine, $linesPerCarton),
+                    'total_amount' => $totalAmount,
+                    'profit' => $totalProfit,
+                ];
+            })->values();
     }
 
-    public function destroy($transaction_id)
+    /**
+     * Recalculate profit for historical sale items.
+     * Updates items where profit = 0 and product has cost_price_per_carton set.
+     */
+    public function recalculate(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $sale = Sale::where('transaction_id', $transaction_id)->firstOrFail();
+        $updatedCount = 0;
 
-        foreach ($sale->saleItems as $item) {
-            // Restore stock by creating a received movement
-            StockMovement::create([
-                'product_id' => $item->product_id,
-                'type' => 'received',
-                'quantity' => $item->quantity,
-                'unit_cost' => $item->unit_cost_price,
-                'total_cost' => $item->quantity * $item->unit_cost_price,
-                'sale_id' => $sale->id,
-            ]);
+        // Get all products with cost_price_per_carton set
+        $products = Product::where('cost_price_per_carton', '>', 0)->get()->keyBy('id');
+
+        if ($products->isEmpty()) {
+            return redirect()->back()->with('warning', 'No products have cost prices set. Please update product cost prices first.');
         }
 
-        $sale->delete();
+        // Find sale items that need recalculation
+        $saleItems = SaleItem::where(function ($q) {
+            $q->where('profit', 0)
+                ->orWhereNull('profit');
+        })
+            ->whereIn('product_id', $products->keys())
+            ->get();
 
-        return redirect()->route('sales-transactions.index')->with('success', 'Sales transaction deleted successfully.');
+        foreach ($saleItems as $item) {
+            $product = $products[$item->product_id] ?? null;
+            if (! $product) {
+                continue;
+            }
+
+            $linesPerCarton = $product->lines_per_carton ?? 1;
+            $costPricePerCarton = $product->cost_price_per_carton ?? 0;
+            $costPricePerLine = $linesPerCarton > 0 ? $costPricePerCarton / $linesPerCarton : 0;
+
+            // Update unit_cost_price and calculate profit
+            $item->unit_cost_price = $costPricePerLine;
+            $item->profit = ($item->unit_selling_price - $costPricePerLine) * $item->quantity;
+            $item->save();
+
+            $updatedCount++;
+        }
+
+        return redirect()->back()->with('success', "Recalculated profit for {$updatedCount} sale items.");
     }
 }

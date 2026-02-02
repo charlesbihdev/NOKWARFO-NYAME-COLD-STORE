@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('daily-sales-report', DailySalesReportController::class);
     Route::resource('credit-collection', CreditCollectionController::class);
     Route::resource('profit-analysis', ProfitAnalysisController::class);
+    Route::post('/profit-analysis/recalculate', [ProfitAnalysisController::class, 'recalculate'])->name('profit-analysis.recalculate');
     Route::resource('bank-transfers', BankTransferController::class);
     Route::resource('cash-notes', CashNoteController::class);
     Route::resource('suppliers', SupplierController::class);
