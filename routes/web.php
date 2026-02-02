@@ -68,14 +68,24 @@ Route::middleware('auth')->group(function () {
     Route::post('/suppliers/{supplier}/credit-transactions', [SupplierController::class, 'createCreditTransaction'])->name('suppliers.create-credit-transaction');
     Route::put('/suppliers/credit-transactions/{transaction}', [SupplierController::class, 'updateCreditTransaction'])->name('suppliers.update-credit-transaction');
     Route::delete('/suppliers/credit-transactions/{transaction}', [SupplierController::class, 'deleteCreditTransaction'])->name('suppliers.delete-credit-transaction');
+    Route::put('/suppliers/credit-transactions/{transaction}/items/{item}', [SupplierController::class, 'updateTransactionItem'])->name('suppliers.update-transaction-item');
+    Route::delete('/suppliers/credit-transactions/{transaction}/items/{item}', [SupplierController::class, 'deleteTransactionItem'])->name('suppliers.delete-transaction-item');
     Route::post('/suppliers/{supplier}/payments', [SupplierController::class, 'makePayment'])->name('suppliers.make-payment');
     Route::put('/suppliers/payments/{payment}', [SupplierController::class, 'updatePayment'])->name('suppliers.update-payment');
     Route::delete('/suppliers/payments/{payment}', [SupplierController::class, 'deletePayment'])->name('suppliers.delete-payment');
+    Route::post('/suppliers/{supplier}/debts', [SupplierController::class, 'storeDebt'])->name('suppliers.debts.store');
+    Route::put('/suppliers/{supplier}/debts/{debt}', [SupplierController::class, 'updateDebt'])->name('suppliers.debts.update');
+    Route::delete('/suppliers/{supplier}/debts/{debt}', [SupplierController::class, 'destroyDebt'])->name('suppliers.debts.destroy');
     Route::patch('/suppliers/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
     // Enhanced customer debt management routes
     Route::get('/customers/{customer}/transactions', [CustomerController::class, 'transactions'])->name('customers.transactions');
     Route::post('/customers/{customer}/payments', [CustomerController::class, 'storePayment'])->name('customers.payments.store');
+    Route::put('/customers/payments/{payment}', [CustomerController::class, 'updatePayment'])->name('customers.payments.update');
+    Route::delete('/customers/payments/{payment}', [CustomerController::class, 'deletePayment'])->name('customers.payments.delete');
+    Route::post('/customers/{customer}/debts', [CustomerController::class, 'storeDebt'])->name('customers.debts.store');
+    Route::put('/customers/{customer}/debts/{debt}', [CustomerController::class, 'updateDebt'])->name('customers.debts.update');
+    Route::delete('/customers/{customer}/debts/{debt}', [CustomerController::class, 'destroyDebt'])->name('customers.debts.destroy');
     Route::get('/customers/{customer}/summary', [CustomerController::class, 'getTransactionSummary'])->name('customers.summary');
     Route::patch('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
 });

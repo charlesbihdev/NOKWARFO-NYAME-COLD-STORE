@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(php artisan make:migration:*)",
+      "Bash(vendor/bin/pint:*)"
     ]
   }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CreditCollection;
 use App\Models\Customer;
+use App\Models\CustomerDebt;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -87,6 +88,26 @@ class CustomerController extends Controller
 
     public function transactions(Customer $customer)
     {
+        // Get historical debts
+        $historicalDebts = $customer->debts()
+            ->orderByDesc('debt_date')
+            ->get()
+            ->map(function ($debt) {
+                return [
+                    'id' => 'debt_'.$debt->id,
+                    'date' => $debt->debt_date->format('Y-m-d'),
+                    'type' => 'historical_debt',
+                    'reference' => 'DEBT-'.$debt->id,
+                    'description' => $debt->description ?? 'Historical debt',
+                    'debt_amount' => $debt->amount,
+                    'payment_amount' => 0,
+                    'current_balance' => 0, // Will be calculated in running balance
+                    'notes' => $debt->notes,
+                    'debt_record_id' => $debt->id,
+                    'created_at' => $debt->debt_date, // Use debt_date for sorting
+                ];
+            });
+
         // Get credit sales (debt transactions) with proper relationships
         $creditSales = $customer->sales()
             ->whereIn('payment_type', ['credit', 'partial'])
@@ -127,6 +148,7 @@ class CustomerController extends Controller
             ->map(function ($collection) {
                 return [
                     'id' => 'payment_'.$collection->id,
+                    'payment_id' => $collection->id,
                     'date' => $collection->created_at->format('Y-m-d'),
                     'type' => 'payment',
                     'reference' => 'PAY-'.$collection->id,
@@ -139,17 +161,20 @@ class CustomerController extends Controller
                 ];
             });
 
-        // Combine and sort by created_at desc (newest first)
-        $allTransactions = $creditSales->concat($payments)
-            ->sortByDesc('created_at')
+        // Combine and sort by date DESC first, then by created_at DESC as tiebreaker
+        $allTransactions = $historicalDebts->concat($creditSales)->concat($payments)
+            ->sortBy([
+                ['date', 'asc'],  // Sort by date ascending first (oldest first)
+                ['created_at', 'asc'],  // Then by created_at ascending as tiebreaker
+            ])
             ->values();
 
-        // Calculate running balances properly
+        // Calculate running balances in chronological order (oldest to newest)
         $runningBalance = 0;
-        $transactionsWithBalance = $allTransactions->reverse()->map(function ($transaction) use (&$runningBalance) {
+        $transactionsWithBalance = $allTransactions->map(function ($transaction) use (&$runningBalance) {
             $transaction['previous_balance'] = $runningBalance;
 
-            if ($transaction['type'] === 'debt') {
+            if ($transaction['type'] === 'debt' || $transaction['type'] === 'historical_debt') {
                 // Debt increases the balance owed
                 $runningBalance += $transaction['debt_amount'];
             } else {
@@ -160,7 +185,7 @@ class CustomerController extends Controller
             $transaction['current_balance'] = $runningBalance;
 
             return $transaction;
-        })->reverse()->values();
+        })->reverse()->values();  // Reverse at the end to show newest first
 
         // Manual pagination
         $perPage = 30;
@@ -225,6 +250,50 @@ class CustomerController extends Controller
         ]);
     }
 
+    public function updatePayment(Request $request, CreditCollection $payment)
+    {
+        $validated = $request->validate([
+            'amount_collected' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Validate payment amount doesn't exceed debt (considering other payments)
+        $customer = $payment->customer;
+        $currentOutstandingBalance = $customer->getOutstandingBalance();
+        $originalPaymentAmount = $payment->amount_collected;
+        $newOutstandingWithChange = $currentOutstandingBalance + $originalPaymentAmount - $validated['amount_collected'];
+
+        if ($newOutstandingWithChange < 0) {
+            return back()->withErrors([
+                'amount_collected' => 'Payment amount cannot exceed current debt',
+            ]);
+        }
+
+        // Update the credit collection record
+        $payment->update([
+            'amount_collected' => $validated['amount_collected'],
+            'notes' => $validated['notes'],
+        ]);
+
+        // Update the created_at to reflect the payment date
+        $payment->created_at = $validated['payment_date'];
+        $payment->save();
+
+        return back()->with([
+            'success' => 'Payment updated successfully',
+        ]);
+    }
+
+    public function deletePayment(CreditCollection $payment)
+    {
+        $payment->delete();
+
+        return back()->with([
+            'success' => 'Payment deleted successfully',
+        ]);
+    }
+
     public function getTransactionSummary(Customer $customer)
     {
         $summary = [
@@ -244,6 +313,61 @@ class CustomerController extends Controller
         ];
 
         return response()->json($summary);
+    }
+
+    public function storeDebt(Request $request, Customer $customer)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'debt_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $customer->debts()->create($validated);
+
+        return back()->with([
+            'success' => 'Debt recorded successfully',
+        ]);
+    }
+
+    public function updateDebt(Request $request, Customer $customer, CustomerDebt $debt)
+    {
+        // Ensure debt belongs to this customer
+        if ($debt->customer_id !== $customer->id) {
+            return back()->withErrors([
+                'error' => 'Debt does not belong to this customer',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'debt_date' => 'required|date',
+            'description' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $debt->update($validated);
+
+        return back()->with([
+            'success' => 'Debt updated successfully',
+        ]);
+    }
+
+    public function destroyDebt(Customer $customer, CustomerDebt $debt)
+    {
+        // Ensure debt belongs to this customer
+        if ($debt->customer_id !== $customer->id) {
+            return back()->withErrors([
+                'error' => 'Debt does not belong to this customer',
+            ]);
+        }
+
+        $debt->delete();
+
+        return back()->with([
+            'success' => 'Debt deleted successfully',
+        ]);
     }
 
     public function toggleStatus(Customer $customer)

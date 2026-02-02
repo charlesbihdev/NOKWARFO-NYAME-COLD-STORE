@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 
 import DateRangePicker from '@/components/DateRangePicker';
+import DebtModal from '@/components/supplier/DebtModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,7 @@ import { Edit, Trash2, Users } from 'lucide-react';
 
 import { Link } from '@inertiajs/react';
 
-function SupplierTransactions({ supplier, transactions, payments = [], start_date = '', end_date = '', products = [], errors = {} }) {
+function SupplierTransactions({ supplier, transactions, payments = [], debts = [], start_date = '', end_date = '', products = [], errors = {} }) {
     // Date range states
     const getCurrentMonthRange = () => {
         const now = new Date();
@@ -27,9 +28,14 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
     const [endDate, setEndDate] = useState(end_date || defaultEndDate);
     
     // Payment modal states
-
+    const [showDebtDialog, setShowDebtDialog] = useState(false);
     const [showEditPaymentModal, setShowEditPaymentModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState(null);
+    const [showEditDebtModal, setShowEditDebtModal] = useState(false);
+    const [editingDebt, setEditingDebt] = useState(null);
+    const [showEditItemModal, setShowEditItemModal] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [editingTransaction, setEditingTransaction] = useState(null);
 
     const goBack = () => router.get(route('suppliers.index'));
 
@@ -99,6 +105,48 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
         }
     }
 
+    function handleEditDebt(debt) {
+        setEditingDebt(debt);
+        setShowEditDebtModal(true);
+    }
+
+    function handleDeleteDebt(debtId) {
+        if (confirm('Are you sure you want to delete this debt record? This action cannot be undone.')) {
+            router.delete(route('suppliers.debts.destroy', [supplier.id, debtId]), {
+                onSuccess: () => {
+                    // Debt deleted successfully
+                },
+                onError: (errors) => {
+                    // Show error message to user
+                    if (errors.error) {
+                        alert('Cannot delete debt: ' + errors.error);
+                    } else {
+                        alert('Failed to delete debt. Please try again.');
+                    }
+                },
+                preserveScroll: true,
+                preserveState: true,
+                only: ['supplier', 'transactions', 'payments', 'debts', 'errors', 'flash'],
+            });
+        }
+    }
+
+    function handleEditItem(transaction, item) {
+        setEditingTransaction(transaction);
+        setEditingItem(item);
+        setShowEditItemModal(true);
+    }
+
+    function handleDeleteItem(transactionId, itemId) {
+        if (confirm('Are you sure you want to delete this item? The transaction total will be recalculated.')) {
+            router.delete(route('suppliers.delete-transaction-item', [transactionId, itemId]), {
+                preserveScroll: true,
+                preserveState: true,
+                only: ['supplier', 'transactions', 'errors', 'flash'],
+            });
+        }
+    }
+
     function formatCurrency(amount) {
         const numAmount = parseFloat(amount) || 0;
         return `GHC ${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -146,6 +194,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <DebtModal supplier={supplier} open={showDebtDialog} onOpenChange={setShowDebtDialog} />
                         <Button variant="outline" onClick={goBack}>
                             ← Back to Suppliers
                         </Button>
@@ -261,7 +310,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
 
                                 {/* Results Count */}
                                 <div className="text-sm text-gray-600">
-                                    Showing {(transactions.data?.length || 0) + (payments?.length || 0)} timeline items (transactions + payments)
+                                    Showing {(transactions.data?.length || 0) + (payments?.length || 0) + (debts?.length || 0)} timeline items (transactions + payments + debts)
                             </div>
                         </div>
 
@@ -308,7 +357,17 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                         });
                                     }
                                 });
-                                
+
+                                // Add historical debts
+                                debts.forEach((debt) => {
+                                    timelineItems.push({
+                                        ...debt,
+                                        type: 'historical_debt',
+                                        sortDate: parseLocalDate(debt.date) || new Date(),
+                                        sortCreatedAt: new Date(),
+                                    });
+                                });
+
                                 // Sort by date DESC first, then by created_at DESC as tie-breaker (newest first)
                                 // Backend already sends data in DESC order, but we need to sort combined timeline
                                 timelineItems.sort((a, b) => {
@@ -374,6 +433,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                         <th className="px-3 py-2 text-right font-medium text-gray-700">Qty</th>
                                                                         <th className="px-3 py-2 text-right font-medium text-gray-700">Unit Price</th>
                                                                         <th className="px-3 py-2 text-right font-medium text-gray-700">Total</th>
+                                                                        <th className="px-3 py-2 text-right font-medium text-gray-700">Actions</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -381,16 +441,34 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                                         <tr key={itemDetail.id || index} className="hover:bg-gray-50">
                                                                             <td className="px-3 py-2 text-gray-900">{itemDetail.product_name}</td>
                                                                             <td className="px-3 py-2 text-right text-gray-700">
-                                                                                {itemDetail.quantity}
+                                                                                {itemDetail.quantity_display || itemDetail.cartons || itemDetail.total_quantity || 0}
                                                                             </td>
                                                                             <td className="px-3 py-2 text-right text-gray-700">
                                                                                 {formatCurrency(itemDetail.unit_price)}
                                                                             </td>
                                                                             <td className="px-3 py-2 text-right font-medium text-gray-900">
-                                                                                {formatCurrency(
-                                                                                    itemDetail.total_amount ||
-                                                                                        itemDetail.quantity * itemDetail.unit_price,
-                                                                                )}
+                                                                                {formatCurrency(itemDetail.total_amount)}
+                                                                            </td>
+                                                                            <td className="px-3 py-2 text-right">
+                                                                                <div className="flex justify-end gap-2">
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        onClick={() => handleEditItem(item, itemDetail)}
+                                                                                        className="text-blue-600 hover:text-blue-700"
+                                                                                    >
+                                                                                        <Edit className="h-3 w-3" />
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        onClick={() => handleDeleteItem(item.id, itemDetail.id)}
+                                                                                        className="text-red-600 hover:text-red-700"
+                                                                                        disabled={item.items.length <= 1}
+                                                                                    >
+                                                                                        <Trash2 className="h-3 w-3" />
+                                                                                    </Button>
+                                                                                </div>
                                                                             </td>
                                                                         </tr>
                                                                     ))}
@@ -473,7 +551,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                 )}
                                             </div>
                                         );
-                                    } else {
+                                    } else if (item.type === 'payment') {
                                         // This is a standalone payment (already filtered to exclude linked ones)
                                         return (
                                             <div key={`payment-${item.id}`} className="rounded-lg border bg-white p-4 shadow-sm">
@@ -569,6 +647,62 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                                         <div className="border-t pt-2 text-xs text-gray-600">
                                                             <span className="font-medium">Notes:</span> {item.notes}
                                                         </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    } else if (item.type === 'historical_debt') {
+                                        // This is a historical debt record
+                                        return (
+                                            <div key={`debt-${item.debt_id}`} className="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+                                                {/* Debt Header */}
+                                                <div className="mb-3 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                                                            <h3 className="text-base font-semibold">
+                                                                {formatDateDisplay(parseLocalDate(item.date) || new Date())}
+                                                            </h3>
+                                                        </div>
+                                                        <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
+                                                            Historical Debt
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleEditDebt(item)}
+                                                            className="text-blue-600"
+                                                        >
+                                                            <Edit className="mr-2 h-3 w-3" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleDeleteDebt(item.debt_id)}
+                                                            className="text-red-600"
+                                                        >
+                                                            <Trash2 className="mr-2 h-3 w-3" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Debt Details */}
+                                                <div className="mb-3">
+                                                    <div className="mb-2">
+                                                        <h3 className="text-lg font-semibold text-red-600">
+                                                            {formatCurrency(item.amount)}
+                                                        </h3>
+                                                    </div>
+                                                    {item.description && (
+                                                        <p className="text-sm text-gray-700 font-medium">{item.description}</p>
+                                                    )}
+                                                    {item.notes && (
+                                                        <p className="mt-1 text-sm text-gray-600">{item.notes}</p>
                                                     )}
                                                 </div>
                                             </div>
@@ -719,6 +853,238 @@ function SupplierTransactions({ supplier, transactions, payments = [], start_dat
                                     </Button>
                                     <Button type="submit">Update Payment</Button>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Debt Modal */}
+            {showEditDebtModal && editingDebt && (
+                <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+                    <div className="w-full max-w-md rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Edit Debt Record</h3>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                const formData = new FormData(e.target);
+                                router.put(
+                                    route('suppliers.debts.update', [supplier.id, editingDebt.debt_id]),
+                                    {
+                                        amount: formData.get('amount'),
+                                        debt_date: formData.get('debt_date'),
+                                        description: formData.get('description'),
+                                        notes: formData.get('notes'),
+                                    },
+                                    {
+                                        onSuccess: () => {
+                                            setShowEditDebtModal(false);
+                                            setEditingDebt(null);
+                                        },
+                                        preserveScroll: true,
+                                        preserveState: true,
+                                        only: ['supplier', 'transactions', 'payments', 'debts', 'flash'],
+                                    },
+                                );
+                            }}
+                        >
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="edit_debt_amount">
+                                        Amount <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input
+                                        type="number"
+                                        id="edit_debt_amount"
+                                        name="amount"
+                                        step="0.01"
+                                        min="0.01"
+                                        defaultValue={editingDebt.amount}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        placeholder="0.00"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit_debt_date">
+                                        Debt Date <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input
+                                        type="date"
+                                        id="edit_debt_date"
+                                        name="debt_date"
+                                        defaultValue={editingDebt.date}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit_debt_description">Description</Label>
+                                    <input
+                                        type="text"
+                                        id="edit_debt_description"
+                                        name="description"
+                                        defaultValue={editingDebt.description || ''}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        placeholder="Brief description"
+                                        maxLength={500}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="edit_debt_notes">Additional Notes</Label>
+                                    <textarea
+                                        id="edit_debt_notes"
+                                        name="notes"
+                                        rows="3"
+                                        defaultValue={editingDebt.notes || ''}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        placeholder="Optional notes"
+                                        maxLength={1000}
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowEditDebtModal(false);
+                                            setEditingDebt(null);
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Update Debt</Button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Transaction Item Modal */}
+            {showEditItemModal && editingItem && editingTransaction && (
+                <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+                    <div className="w-full max-w-md rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Edit Transaction Item</h3>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                const formData = new FormData(e.target);
+                                router.put(
+                                    route('suppliers.update-transaction-item', [editingTransaction.id, editingItem.id]),
+                                    {
+                                        product_id: editingItem.product_id,
+                                        product_name: formData.get('product_name'),
+                                        cartons: formData.get('cartons'),
+                                        lines: formData.get('lines'),
+                                        lines_per_carton: formData.get('lines_per_carton'),
+                                        unit_price: formData.get('unit_price'),
+                                    },
+                                    {
+                                        onSuccess: () => {
+                                            setShowEditItemModal(false);
+                                            setEditingItem(null);
+                                            setEditingTransaction(null);
+                                        },
+                                        preserveScroll: true,
+                                        preserveState: true,
+                                        only: ['supplier', 'transactions', 'flash'],
+                                    },
+                                );
+                            }}
+                        >
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="edit_item_product_name">
+                                        Product Name <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input
+                                        id="edit_item_product_name"
+                                        name="product_name"
+                                        type="text"
+                                        defaultValue={editingItem.product_name}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        required
+                                        maxLength={255}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="edit_item_cartons">Cartons</Label>
+                                        <input
+                                            id="edit_item_cartons"
+                                            name="cartons"
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            defaultValue={editingItem.cartons || 0}
+                                            className="w-full rounded-md border px-3 py-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="edit_item_lines">Lines</Label>
+                                        <input
+                                            id="edit_item_lines"
+                                            name="lines"
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            defaultValue={editingItem.lines || 0}
+                                            className="w-full rounded-md border px-3 py-2"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="edit_item_lines_per_carton">
+                                        Lines per Carton <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input
+                                        id="edit_item_lines_per_carton"
+                                        name="lines_per_carton"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        defaultValue={editingItem.lines_per_carton || 1}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="edit_item_unit_price">
+                                        Unit Price <span className="text-red-500">*</span>
+                                    </Label>
+                                    <input
+                                        id="edit_item_unit_price"
+                                        name="unit_price"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        defaultValue={editingItem.unit_price}
+                                        className="w-full rounded-md border px-3 py-2"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowEditItemModal(false);
+                                        setEditingItem(null);
+                                        setEditingTransaction(null);
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                                    Update Item
+                                </Button>
                             </div>
                         </form>
                     </div>

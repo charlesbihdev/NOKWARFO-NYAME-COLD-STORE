@@ -4,10 +4,14 @@ import AppLayout from '@/layouts/app-layout';
 import { useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react'; // Added for useEffect
 import AddTransactionModal from '../components/sales/AddTransactionmodal';
+import EditSaleModal from '../components/sales/EditSaleModal';
 import SalesTable from '../components/sales/salesTable';
 
 function SalesTransactions({ sales_transactions = [], products = [], customers = [] }) {
     const [open, setOpen] = useState(false);
+    // Edit modal state
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState(null);
     // Cart-style items state
     const [items, setItems] = useState([{ product_id: '', qty: '', unit_selling_price: '', total: '' }]);
     // Payment state
@@ -88,6 +92,17 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
         });
     };
 
+    // Edit modal handlers
+    const handleEdit = (transaction) => {
+        setEditingTransaction(transaction);
+        setEditOpen(true);
+    };
+
+    const handleEditClose = () => {
+        setEditOpen(false);
+        setEditingTransaction(null);
+    };
+
     const breadcrumbs = [{ title: 'Sales Transactions', href: '/sales-transactions' }];
 
     // Summary calculations
@@ -138,7 +153,8 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
                     </Card>
                 </div>
 
-                <SalesTable sales_transactions={sales_transactions} />
+                <SalesTable sales_transactions={sales_transactions} onEdit={handleEdit} />
+
                 {/* Add Transaction Modal */}
                 <AddTransactionModal
                     open={open}
@@ -156,6 +172,15 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
                     setPaymentType={setPaymentType}
                     runningTotal={runningTotal}
                     // onSubmit={handleSubmit}
+                />
+
+                {/* Edit Transaction Modal */}
+                <EditSaleModal
+                    open={editOpen}
+                    onClose={handleEditClose}
+                    transaction={editingTransaction}
+                    products={products}
+                    customers={customers}
                 />
             </div>
         </AppLayout>

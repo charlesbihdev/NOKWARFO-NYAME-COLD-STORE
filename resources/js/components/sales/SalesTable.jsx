@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Link, router } from '@inertiajs/react';
 import { debounce } from 'lodash'; // or implement simple debounce yourself
-import { Receipt } from 'lucide-react';
+import { Pencil, Receipt } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import DateRangePicker from '../DateRangePicker';
 import CreditReceipt from './CreditReceipt';
@@ -12,7 +12,7 @@ import InstantPaymentReceipt from './InstantPaymentReceipt';
 import SearchBar from './SearchBar';
 
 // Main Sales Table Component
-const SalesTable = ({ sales_transactions }) => {
+const SalesTable = ({ sales_transactions, onEdit }) => {
     const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [receiptType, setReceiptType] = useState(null);
 
@@ -168,6 +168,15 @@ const SalesTable = ({ sales_transactions }) => {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => onEdit && onEdit(transaction)}
+                                                className="text-green-600 hover:text-green-800"
+                                            >
+                                                <Pencil className="mr-1 h-4 w-4" />
+                                                Edit
+                                            </Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
