@@ -7,7 +7,7 @@ import BankTransferAnalytics from '../components/bank-transfer/BankTransferAnaly
 import BankTransferForm from '../components/bank-transfer/BankTransferForm';
 import BankTransfersTable from '../components/bank-transfer/BankTransfersTable';
 import DeleteConfirmDialog from '../components/bank-transfer/DeleteConfirmDialog';
-import TagCreationForm from '../components/bank-transfer/TagCreationForm';
+import TagManagementSheet from '../components/bank-transfer/TagManagementSheet';
 
 export default function BankTransfers({ bank_transfers = [], tags = [], last_balance = 0, start_date = '', end_date = '', statistics = null }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -50,17 +50,13 @@ export default function BankTransfers({ bank_transfers = [], tags = [], last_bal
         });
     }
 
-    function onTagAdded() {
-        // Optional: you can refresh tags or do something after tag added
-    }
-
     return (
         <AppLayout breadcrumbs={[{ title: 'Bank Transfers', href: '/bank-transfers' }]}>
             <div className="min-h-screen space-y-6 bg-gray-100 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h1 className="text-3xl font-bold">Bank Transfers</h1>
-                    <div className="flex items-center space-x-4">
-                        <TagCreationForm onAddTag={onTagAdded} />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <TagManagementSheet tags={tags} />
                         <BankTransferForm tags={tags} lastBalance={last_balance} isOpen={isAddModalOpen} setIsOpen={setIsAddModalOpen} />
                     </div>
                 </div>

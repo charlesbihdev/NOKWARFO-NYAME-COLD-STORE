@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('daily-collections', DailyCollectionsController::class);
     Route::resource('sales-transactions', SalesTransactionController::class);
     Route::post('/bank-transfer-tags', [BankTransferTagController::class, 'store'])->name('bank-transfer-tags.store');
+    Route::put('/bank-transfer-tags/{tag}', [BankTransferTagController::class, 'update'])->name('bank-transfer-tags.update');
     Route::delete('/bank-transfer-tags/{tag}', [BankTransferTagController::class, 'destroy'])->name('bank-transfer-tags.destroy');
     Route::resource('expenses', ExpenseController::class);
     Route::resource('trip-estimations', TripEstimationController::class);
