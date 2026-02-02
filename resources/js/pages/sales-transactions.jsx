@@ -2,10 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react'; // Added for useEffect
+import { useEffect, useState } from 'react';
 import AddTransactionModal from '../components/sales/AddTransactionmodal';
 import EditSaleModal from '../components/sales/EditSaleModal';
 import SalesTable from '../components/sales/salesTable';
+import InstantPaymentReceipt from '../components/sales/InstantPaymentReceipt';
+import CreditReceipt from '../components/sales/CreditReceipt';
 
 function SalesTransactions({ sales_transactions = [], products = [], customers = [] }) {
     const [open, setOpen] = useState(false);
@@ -18,6 +20,9 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
     const [amountPaid, setAmountPaid] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [paymentType, setPaymentType] = useState('cash');
+    // Receipt modal state (like CustomerTransactions pattern)
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [receiptData, setReceiptData] = useState(null);
     const form = useForm({
         customer_id: '',
         customer_name: '',
@@ -103,6 +108,18 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
         setEditingTransaction(null);
     };
 
+    // Handle successful sale creation - show receipt modal
+    const handleSaleSuccess = (saleData) => {
+        setReceiptData(saleData);
+        setShowReceipt(true);
+    };
+
+    // Close receipt modal
+    const closeReceipt = () => {
+        setShowReceipt(false);
+        setReceiptData(null);
+    };
+
     const breadcrumbs = [{ title: 'Sales Transactions', href: '/sales-transactions' }];
 
     // Summary calculations
@@ -171,7 +188,7 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
                     paymentType={paymentType}
                     setPaymentType={setPaymentType}
                     runningTotal={runningTotal}
-                    // onSubmit={handleSubmit}
+                    onSaleSuccess={handleSaleSuccess}
                 />
 
                 {/* Edit Transaction Modal */}
@@ -182,6 +199,13 @@ function SalesTransactions({ sales_transactions = [], products = [], customers =
                     products={products}
                     customers={customers}
                 />
+
+                {/* Receipt Modal - shows after successful sale */}
+                {showReceipt && receiptData && (
+                    receiptData.status === 'Completed' && parseFloat(receiptData.amount_owed) === 0
+                        ? <InstantPaymentReceipt transaction={receiptData} onClose={closeReceipt} />
+                        : <CreditReceipt transaction={receiptData} onClose={closeReceipt} />
+                )}
             </div>
         </AppLayout>
     );

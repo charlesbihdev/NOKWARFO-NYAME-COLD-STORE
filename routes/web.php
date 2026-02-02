@@ -3,6 +3,7 @@
 use App\Http\Controllers\BankTransferController;
 // use App\Http\Controllers\SaleController;
 use App\Http\Controllers\BankTransferTagController;
+use App\Http\Controllers\CashNoteController;
 use App\Http\Controllers\CreditCollectionController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DailyCollectionsController;
@@ -37,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('credit-collection', CreditCollectionController::class);
     Route::resource('profit-analysis', ProfitAnalysisController::class);
     Route::resource('bank-transfers', BankTransferController::class);
+    Route::resource('cash-notes', CashNoteController::class);
     Route::resource('suppliers', SupplierController::class);
     Route::resource('customers', CustomerController::class);
     Route::resource('daily-collections', DailyCollectionsController::class);
