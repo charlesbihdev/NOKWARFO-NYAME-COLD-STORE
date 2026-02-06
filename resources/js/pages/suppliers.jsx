@@ -1,3 +1,4 @@
+import ConfirmArchiveModal from '@/components/ConfirmArchiveModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,9 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState(null);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [supplierToDelete, setSupplierToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const breadcrumbs = [{ title: 'Suppliers', href: '/suppliers' }];
 
@@ -30,14 +34,41 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
         setIsEditModalOpen(true);
     }
 
-    function handleDelete(supplierId) {
-        if (confirm('Are you sure you want to delete this supplier?')) {
-            router.delete(route('suppliers.destroy', supplierId), {
-                preserveScroll: true,
-                preserveState: true,
-                only: ['suppliers', 'flash', 'errors'],
-            });
+    function handleDelete(supplier) {
+        setSupplierToDelete(supplier);
+        setDeleteModalOpen(true);
+    }
+
+    function confirmDeleteSupplier() {
+        if (!supplierToDelete) return;
+        setIsDeleting(true);
+        router.delete(route('suppliers.destroy', supplierToDelete.id), {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['suppliers', 'flash', 'errors'],
+            onFinish: () => {
+                setIsDeleting(false);
+                setDeleteModalOpen(false);
+                setSupplierToDelete(null);
+            },
+        });
+    }
+
+    function getSupplierRelatedDataMessage(supplier) {
+        const parts = [];
+        if (supplier.transactions_count > 0) {
+            parts.push(`${supplier.transactions_count} transactions`);
         }
+        if (supplier.payments_count > 0) {
+            parts.push(`${supplier.payments_count} payments`);
+        }
+        if (supplier.debts_count > 0) {
+            parts.push(`${supplier.debts_count} debts`);
+        }
+        if (supplier.total_outstanding > 0) {
+            parts.push(`GHC ${supplier.total_outstanding.toLocaleString()} outstanding`);
+        }
+        return parts.length > 0 ? parts.join(', ') : null;
     }
 
     function handleAddTransaction(supplier) {
@@ -258,9 +289,8 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleDelete(supplier.id)}
+                                                    onClick={() => handleDelete(supplier)}
                                                     className="text-red-600"
-                                                    disabled={supplier.has_outstanding_debt}
                                                     title={
                                                         supplier.has_outstanding_debt
                                                             ? 'Cannot delete supplier with outstanding debt'
@@ -309,6 +339,20 @@ function Suppliers({ suppliers = [], products = [], errors = {} }) {
                     }}
                     supplier={selectedSupplier}
                     errors={errors}
+                />
+
+                {/* Delete/Archive Confirmation Modal */}
+                <ConfirmArchiveModal
+                    isOpen={deleteModalOpen}
+                    onClose={() => {
+                        setDeleteModalOpen(false);
+                        setSupplierToDelete(null);
+                    }}
+                    onConfirm={confirmDeleteSupplier}
+                    title="Delete Supplier"
+                    itemName={supplierToDelete?.name}
+                    relatedDataMessage={supplierToDelete ? getSupplierRelatedDataMessage(supplierToDelete) : null}
+                    isProcessing={isDeleting}
                 />
             </div>
         </AppLayout>

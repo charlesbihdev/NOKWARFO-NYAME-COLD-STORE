@@ -94,9 +94,9 @@ class CreditCollectionController extends Controller
                             ->whereDate('created_at', '<=', $date)
                             ->latest()
                             ->first())
-                            ?->created_at
-                            ?->startOfDay()
-                            ->diffInDays(now()->parse($date)->startOfDay()),
+                        ?->created_at
+                        ?->startOfDay()
+                        ->diffInDays(now()->parse($date)->startOfDay()),
 
                 ];
             }
@@ -104,8 +104,8 @@ class CreditCollectionController extends Controller
             return null;
         })->filter()->values();
 
-        // Customers list for dropdown
-        $customers = Customer::orderBy('name')->get(['id', 'name']);
+        // Customers list for dropdown (only active customers)
+        $customers = Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('credit-collection', [
             'credit_collections' => $credit_collections,

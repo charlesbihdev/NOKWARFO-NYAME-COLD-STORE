@@ -1,3 +1,4 @@
+import ConfirmArchiveModal from '@/components/ConfirmArchiveModal';
 import InputError from '@/components/InputError';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,9 @@ function Products({ products = [], suppliers = [], errors = {} }) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Form for product data
     const {
@@ -80,15 +84,38 @@ function Products({ products = [], suppliers = [], errors = {} }) {
         });
     }
 
-    // Handle product deletion
-    function handleDeleteProduct(productId) {
-        if (confirm('Are you sure you want to delete this product?')) {
-            router.delete(route('products.destroy', productId), {
-                preserveScroll: true,
-                preserveState: true,
-                only: ['products', 'flash'],
-            });
+    // Handle product deletion - open modal
+    function handleDeleteProduct(product) {
+        setProductToDelete(product);
+        setDeleteModalOpen(true);
+    }
+
+    // Confirm product deletion
+    function confirmDeleteProduct() {
+        if (!productToDelete) return;
+        setIsDeleting(true);
+        router.delete(route('products.destroy', productToDelete.id), {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['products', 'flash'],
+            onFinish: () => {
+                setIsDeleting(false);
+                setDeleteModalOpen(false);
+                setProductToDelete(null);
+            },
+        });
+    }
+
+    // Get related data message for product
+    function getProductRelatedDataMessage(product) {
+        const parts = [];
+        if (product.sale_items_count > 0) {
+            parts.push(`${product.sale_items_count} sales`);
         }
+        if (product.stock_movements_count > 0) {
+            parts.push(`${product.stock_movements_count} stock movements`);
+        }
+        return parts.length > 0 ? parts.join(', ') : null;
     }
 
     return (
@@ -416,7 +443,7 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                                                 <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="outline" size="sm" onClick={() => handleDeleteProduct(product.id)}>
+                                                <Button variant="outline" size="sm" onClick={() => handleDeleteProduct(product)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -435,6 +462,20 @@ function Products({ products = [], suppliers = [], errors = {} }) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Delete/Archive Confirmation Modal */}
+            <ConfirmArchiveModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setProductToDelete(null);
+                }}
+                onConfirm={confirmDeleteProduct}
+                title="Delete Product"
+                itemName={productToDelete?.name}
+                relatedDataMessage={productToDelete ? getProductRelatedDataMessage(productToDelete) : null}
+                isProcessing={isDeleting}
+            />
         </AppLayout>
     );
 }

@@ -50,7 +50,8 @@ class DashboardController extends Controller
             : 0;
 
         // Low stock items (less than 5 units)
-        $lowStockItems = Product::with(['stockMovements', 'saleItems.sale'])
+        $lowStockItems = Product::where('is_active', true)
+            ->with(['stockMovements', 'saleItems.sale'])
             ->get()
             ->filter(function ($product) {
                 $incoming = $product->stockMovements()
@@ -62,15 +63,15 @@ class DashboardController extends Controller
                     ->sum('quantity');
 
                 $cashSales = $product->saleItems()
-                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'cash'))
+                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'cash'))
                     ->sum('quantity');
 
                 $creditSales = $product->saleItems()
-                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'credit'))
+                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'credit'))
                     ->sum('quantity');
 
                 $partialSales = $product->saleItems()
-                    ->whereHas('sale', fn ($q) => $q->where('payment_type', 'partial'))
+                    ->whereHas('sale', fn($q) => $q->where('payment_type', 'partial'))
                     ->sum('quantity');
 
                 $available = $incoming - ($sold + $cashSales + $creditSales + $partialSales);
@@ -118,14 +119,16 @@ class DashboardController extends Controller
             : 0;
 
         // Active customers in last 30 days from selected date
-        $activeCustomers = Customer::whereHas('sales', function ($query) use ($today) {
-            $query->where('created_at', '>=', \Carbon\Carbon::parse($today)->subDays(30));
-        })->count();
+        $activeCustomers = Customer::where('is_active', true)
+            ->whereHas('sales', function ($query) use ($today) {
+                $query->where('created_at', '>=', \Carbon\Carbon::parse($today)->subDays(30));
+            })->count();
 
-        $lastMonthActiveCustomers = Customer::whereHas('sales', function ($query) use ($today) {
-            $query->where('created_at', '>=', \Carbon\Carbon::parse($today)->subDays(60))
-                ->where('created_at', '<', \Carbon\Carbon::parse($today)->subDays(30));
-        })->count();
+        $lastMonthActiveCustomers = Customer::where('is_active', true)
+            ->whereHas('sales', function ($query) use ($today) {
+                $query->where('created_at', '>=', \Carbon\Carbon::parse($today)->subDays(60))
+                    ->where('created_at', '<', \Carbon\Carbon::parse($today)->subDays(30));
+            })->count();
 
         $customersChange = $lastMonthActiveCustomers != 0
             ? (($activeCustomers - $lastMonthActiveCustomers) / abs($lastMonthActiveCustomers)) * 100

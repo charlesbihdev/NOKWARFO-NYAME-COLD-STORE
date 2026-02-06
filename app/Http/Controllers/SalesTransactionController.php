@@ -41,8 +41,8 @@ class SalesTransactionController extends Controller
 
         $sales = $query->paginate(30);
 
-        $products = Product::orderBy('name')->get();
-        $customers = Customer::orderBy('name')->get();
+        $products = Product::where('is_active', true)->orderBy('name')->get();
+        $customers = Customer::where('is_active', true)->orderBy('name')->get();
 
         $sales_transactions = $sales->through(function ($sale) {
             $profit = $sale->saleItems->sum(function ($item) {

@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
-import { Banknote, BarChart3, CreditCard, Home, Menu, Package, PiggyBank, ShoppingCart, TrendingUp, Truck, Users, MapPin, Receipt, Wallet } from 'lucide-react';
+import { Archive, Banknote, BarChart3, CreditCard, Home, Menu, Package, PiggyBank, ShoppingCart, TrendingUp, Truck, Users, MapPin, Receipt, Wallet } from 'lucide-react';
 
 const menuItems = [
     { id: 'dashboard.index', label: 'Dashboard', icon: Home, section: 'main' },
     { id: 'products.index', label: 'Products', icon: Package, section: 'setup' },
     { id: 'suppliers.index', label: 'Suppliers', icon: Users, section: 'setup' },
     { id: 'customers.index', label: 'Customers', icon: Users, section: 'setup' },
+    { id: 'archive.index', label: 'Archive', icon: Archive, section: 'setup' },
     // { id: "inventory-management.index", label: "Inventory Management", icon: Archive, section: "inventory" },
     { id: 'stock-control.index', label: 'Stock Control', icon: Truck, section: 'inventory' },
     { id: 'trip-estimations.index', label: 'Trip Profit Estimator', icon: MapPin, section: 'inventory' },

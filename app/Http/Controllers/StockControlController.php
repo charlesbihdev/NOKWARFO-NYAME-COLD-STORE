@@ -57,7 +57,10 @@ class StockControlController extends Controller
                 });
         }
 
-        $products = Product::with(['supplier', 'stockMovements'])->orderBy('name')->get();
+        $products = Product::where('is_active', true)
+            ->with(['supplier', 'stockMovements'])
+            ->orderBy('name')
+            ->get();
 
         // Calculate current stock display for each product (should match remaining stock logic)
         foreach ($products as $product) {
@@ -799,6 +802,38 @@ class StockControlController extends Controller
     public function destroy($id)
     {
         $stockMovement = StockMovement::findOrFail($id);
+        $product = $stockMovement->product;
+
+        $totalReceived = $product->stockMovements()
+            ->where('type', 'received')
+            ->sum('quantity');
+
+        $adjustmentsIn = $product->stockMovements()
+            ->where('type', 'adjustment_in')
+            ->sum('quantity');
+
+        $adjustmentsOut = $product->stockMovements()
+            ->where('type', 'adjustment_out')
+            ->sum('quantity');
+
+        $totalSold = $product->saleItems()->sum('quantity');
+
+        $movementImpact = match ($stockMovement->type) {
+            'received' => -$stockMovement->quantity,
+            'adjustment_in' => -$stockMovement->quantity,
+            'adjustment_out' => $stockMovement->quantity,
+            default => 0,
+        };
+
+        $currentStock = $totalReceived + $adjustmentsIn - $adjustmentsOut - $totalSold;
+        $stockAfterDelete = $currentStock + $movementImpact;
+
+        if ($stockAfterDelete < 0) {
+            $shortage = abs($stockAfterDelete);
+
+            return back()->with('error', "Cannot delete this stock entry — would result in {$shortage} units of negative stock. Use stock adjustment instead.");
+        }
+
         $stockMovement->delete();
 
         return back()->with('success', 'Stock movement deleted successfully.');
@@ -1102,7 +1137,10 @@ class StockControlController extends Controller
     public function dailyMovementReport(Request $request)
     {
         $date = $request->input('date', now()->toDateString());
-        $products = Product::with('supplier')->orderBy('name')->get();
+        $products = Product::where('is_active', true)
+            ->with('supplier')
+            ->orderBy('name')
+            ->get();
         $report = [];
         foreach ($products as $product) {
             // Stock received today

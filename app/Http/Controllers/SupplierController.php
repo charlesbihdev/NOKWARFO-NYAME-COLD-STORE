@@ -23,11 +23,17 @@ class SupplierController extends Controller
 
     public function index()
     {
-        $suppliers = Supplier::with(['creditTransactions'])
+        $suppliers = Supplier::where('is_active', true)
+            ->with(['creditTransactions'])
             ->orderBy('name')
             ->get()
             ->map(function ($supplier) {
-                return $this->creditService->getSupplierSummary($supplier);
+                $summary = $this->creditService->getSupplierSummary($supplier);
+                $summary['transactions_count'] = $supplier->creditTransactions()->count();
+                $summary['payments_count'] = $supplier->payments()->count();
+                $summary['debts_count'] = $supplier->debts()->count();
+
+                return $summary;
             });
 
         // Get products for dropdown
@@ -77,11 +83,14 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier)
     {
-        // Check if supplier has outstanding debt
-        if ($supplier->has_outstanding_debt) {
-            return back()->withErrors([
-                'error' => 'Cannot delete supplier with outstanding debt. Current balance: '.$supplier->formatted_total_outstanding,
-            ]);
+        $hasRelatedData = $supplier->creditTransactions()->exists()
+            || $supplier->payments()->exists()
+            || $supplier->debts()->exists();
+
+        if ($hasRelatedData) {
+            $supplier->update(['is_active' => false]);
+
+            return back()->with('success', 'Supplier archived successfully');
         }
 
         $supplier->delete();
@@ -152,9 +161,9 @@ class SupplierController extends Controller
 
             return back()->with('success', 'Credit transaction created successfully');
         } catch (\Exception $e) {
-            Log::error('Failed to create transaction: '.$e->getMessage());
+            Log::error('Failed to create transaction: ' . $e->getMessage());
 
-            return back()->withErrors(['error' => 'Failed to create transaction: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to create transaction: ' . $e->getMessage()]);
         }
     }
 
@@ -234,14 +243,14 @@ class SupplierController extends Controller
             });
 
             // Auto-generate description from items
-            $description = 'Credit purchase: '.collect($validated['items'])
+            $description = 'Credit purchase: ' . collect($validated['items'])
                 ->map(function ($item) {
                     $cartons = $item['cartons'] ?? 0;
                     $lines = $item['lines'] ?? 0;
                     $linesPerCarton = $item['lines_per_carton'] ?? 1;
                     $totalQuantity = ($cartons * $linesPerCarton) + $lines;
 
-                    return $item['product_name'].' (Qty: '.$totalQuantity.')';
+                    return $item['product_name'] . ' (Qty: ' . $totalQuantity . ')';
                 })
                 ->join(', ');
 
@@ -434,7 +443,7 @@ class SupplierController extends Controller
         $debts = $debtsQuery->orderByDesc('debt_date')->orderByDesc('created_at')->get()
             ->map(function ($debt) {
                 return [
-                    'id' => 'debt_'.$debt->id,
+                    'id' => 'debt_' . $debt->id,
                     'debt_id' => $debt->id,
                     'date' => $debt->debt_date->format('Y-m-d'),
                     'type' => 'historical_debt',

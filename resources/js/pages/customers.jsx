@@ -1,3 +1,4 @@
+import ConfirmArchiveModal from '@/components/ConfirmArchiveModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -23,6 +24,9 @@ function Customers() {
     });
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Debounced search
     const debouncedSearch = useCallback(
@@ -78,14 +82,38 @@ function Customers() {
         });
     }
 
-    function handleDelete(customerId) {
-        if (confirm('Are you sure you want to delete this customer?')) {
-            router.delete(route('customers.destroy', customerId), {
-                preserveScroll: true,
-                preserveState: true,
-                only: ['customers', 'flash'],
-            });
+    function handleDelete(customer) {
+        setCustomerToDelete(customer);
+        setDeleteModalOpen(true);
+    }
+
+    function confirmDeleteCustomer() {
+        if (!customerToDelete) return;
+        setIsDeleting(true);
+        router.delete(route('customers.destroy', customerToDelete.id), {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['customers', 'flash'],
+            onFinish: () => {
+                setIsDeleting(false);
+                setDeleteModalOpen(false);
+                setCustomerToDelete(null);
+            },
+        });
+    }
+
+    function getCustomerRelatedDataMessage(customer) {
+        const parts = [];
+        if (customer.sales_count > 0) {
+            parts.push(`${customer.sales_count} sales`);
         }
+        if (customer.debts_count > 0) {
+            parts.push(`${customer.debts_count} debts`);
+        }
+        if (customer.outstanding_balance > 0) {
+            parts.push(`GHC ${customer.outstanding_balance.toLocaleString()} outstanding`);
+        }
+        return parts.length > 0 ? parts.join(', ') : null;
     }
 
     return (
@@ -277,7 +305,7 @@ function Customers() {
                                                     <Button variant="outline" size="sm" onClick={() => handleEdit(customer)}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
-                                                    <Button variant="outline" size="sm" onClick={() => handleDelete(customer.id)}>
+                                                    <Button variant="outline" size="sm" onClick={() => handleDelete(customer)}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
@@ -361,6 +389,20 @@ function Customers() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete/Archive Confirmation Modal */}
+            <ConfirmArchiveModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setCustomerToDelete(null);
+                }}
+                onConfirm={confirmDeleteCustomer}
+                title="Delete Customer"
+                itemName={customerToDelete?.name}
+                relatedDataMessage={customerToDelete ? getCustomerRelatedDataMessage(customerToDelete) : null}
+                isProcessing={isDeleting}
+            />
         </AppLayout>
     );
 }

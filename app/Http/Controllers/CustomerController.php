@@ -14,7 +14,8 @@ class CustomerController extends Controller
     {
         $search = $request->input('search');
 
-        $query = Customer::with(['sales', 'creditCollections'])
+        $query = Customer::where('is_active', true)
+            ->with(['sales', 'creditCollections'])
             ->orderByDesc('created_at');
 
         if ($search) {
@@ -41,6 +42,8 @@ class CustomerController extends Controller
                     'last_transaction_date' => $this->getLastTransactionDate($customer),
                     'has_outstanding_debt' => $customer->getOutstandingBalance() > 0,
                     'debt_status' => $this->getDebtStatus($customer),
+                    'sales_count' => $customer->sales()->count(),
+                    'debts_count' => $customer->debts()->count(),
                 ];
             });
 
@@ -87,18 +90,19 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer)
     {
-        // Check if customer has outstanding debt
-        if ($customer->getOutstandingBalance() > 0) {
-            return back()->withErrors([
-                'error' => 'Cannot delete customer with outstanding debt. Current balance: GHC '.number_format($customer->getOutstandingBalance(), 2),
-            ]);
+        $hasRelatedData = $customer->sales()->exists()
+            || $customer->creditCollections()->exists()
+            || $customer->debts()->exists();
+
+        if ($hasRelatedData) {
+            $customer->update(['is_active' => false]);
+
+            return back()->with('success', 'Customer archived successfully');
         }
 
         $customer->delete();
 
-        return back()->with([
-            'success' => 'Customer deleted successfully',
-        ]);
+        return back()->with('success', 'Customer deleted successfully');
     }
 
     public function transactions(Customer $customer)
@@ -109,10 +113,10 @@ class CustomerController extends Controller
             ->get()
             ->map(function ($debt) {
                 return [
-                    'id' => 'debt_'.$debt->id,
+                    'id' => 'debt_' . $debt->id,
                     'date' => $debt->debt_date->format('Y-m-d'),
                     'type' => 'historical_debt',
-                    'reference' => 'DEBT-'.$debt->id,
+                    'reference' => 'DEBT-' . $debt->id,
                     'description' => $debt->description ?? 'Historical debt',
                     'debt_amount' => $debt->amount,
                     'payment_amount' => 0,
@@ -135,11 +139,11 @@ class CustomerController extends Controller
                     : ($sale->total - $sale->amount_paid);
 
                 return [
-                    'id' => 'sale_'.$sale->id,
+                    'id' => 'sale_' . $sale->id,
                     'date' => $sale->created_at->format('Y-m-d'),
                     'type' => 'debt',
                     'reference' => $sale->transaction_id,
-                    'description' => 'Sale: '.$sale->saleItems->pluck('product_name')->join(', '),
+                    'description' => 'Sale: ' . $sale->saleItems->pluck('product_name')->join(', '),
                     'debt_amount' => $debtAmount,
                     'payment_amount' => 0,
                     'current_balance' => 0, // Will be calculated in running balance
@@ -162,11 +166,11 @@ class CustomerController extends Controller
             ->get()
             ->map(function ($collection) {
                 return [
-                    'id' => 'payment_'.$collection->id,
+                    'id' => 'payment_' . $collection->id,
                     'payment_id' => $collection->id,
                     'date' => $collection->created_at->format('Y-m-d'),
                     'type' => 'payment',
-                    'reference' => 'PAY-'.$collection->id,
+                    'reference' => 'PAY-' . $collection->id,
                     'description' => 'Payment received',
                     'debt_amount' => 0,
                     'payment_amount' => $collection->amount_collected,
@@ -245,7 +249,7 @@ class CustomerController extends Controller
         $outstandingBalance = $customer->getOutstandingBalance();
         if ($validated['amount_collected'] > $outstandingBalance) {
             return back()->withErrors([
-                'amount_collected' => 'Payment amount cannot exceed current debt of GHC '.number_format($outstandingBalance, 2),
+                'amount_collected' => 'Payment amount cannot exceed current debt of GHC ' . number_format($outstandingBalance, 2),
             ]);
         }
 
@@ -456,7 +460,7 @@ class CustomerController extends Controller
                     'amount' => $sale->payment_type === 'credit'
                         ? $sale->total
                         : ($sale->total - $sale->amount_paid),
-                    'description' => 'Sale: '.$sale->saleItems->pluck('product_name')->join(', '),
+                    'description' => 'Sale: ' . $sale->saleItems->pluck('product_name')->join(', '),
                 ];
             });
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\BankTransferController;
 // use App\Http\Controllers\SaleController;
 use App\Http\Controllers\BankTransferTagController;
@@ -93,6 +94,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/customers/{customer}/debts/{debt}', [CustomerController::class, 'destroyDebt'])->name('customers.debts.destroy');
     Route::get('/customers/{customer}/summary', [CustomerController::class, 'getTransactionSummary'])->name('customers.summary');
     Route::patch('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
+
+    // Product status toggle
+    Route::patch('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle-status');
+
+    // Archive routes
+    Route::get('/archive', [ArchiveController::class, 'index'])->name('archive.index');
+    Route::patch('/archive/products/{product}/restore', [ArchiveController::class, 'restoreProduct'])->name('archive.restore-product');
+    Route::patch('/archive/customers/{customer}/restore', [ArchiveController::class, 'restoreCustomer'])->name('archive.restore-customer');
+    Route::patch('/archive/suppliers/{supplier}/restore', [ArchiveController::class, 'restoreSupplier'])->name('archive.restore-supplier');
 
     // Savings feature routes
     Route::resource('savings', SavingsController::class)->except(['destroy']);

@@ -11,7 +11,15 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with(['supplier'])->get();
+        $products = Product::where('is_active', true)
+            ->with(['supplier'])
+            ->get()
+            ->map(function ($product) {
+                $product->sale_items_count = $product->saleItems()->count();
+                $product->stock_movements_count = $product->stockMovements()->count();
+
+                return $product;
+            });
         $suppliers = Supplier::where('is_active', true)->get();
 
         return Inertia::render('products', [
@@ -59,10 +67,27 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $hasRelatedData = $product->saleItems()->exists() || $product->stockMovements()->exists();
+
+        if ($hasRelatedData) {
+            $product->update(['is_active' => false]);
+
+            return back()->with('success', 'Product archived successfully');
+        }
+
         $product->delete();
 
-        return back()->with([
-            'success' => 'Product deleted successfully',
+        return back()->with('success', 'Product deleted successfully');
+    }
+
+    public function toggleStatus(Product $product)
+    {
+        $product->update([
+            'is_active' => ! $product->is_active,
         ]);
+
+        $status = $product->is_active ? 'restored' : 'archived';
+
+        return back()->with('success', "Product {$status} successfully");
     }
 }

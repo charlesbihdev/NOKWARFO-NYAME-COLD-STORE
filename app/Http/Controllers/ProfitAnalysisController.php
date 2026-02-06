@@ -109,8 +109,11 @@ class ProfitAnalysisController extends Controller
     {
         $updatedCount = 0;
 
-        // Get all products with cost_price_per_carton set
-        $products = Product::where('cost_price_per_carton', '>', 0)->get()->keyBy('id');
+        // Get all active products with cost_price_per_carton set
+        $products = Product::where('is_active', true)
+            ->where('cost_price_per_carton', '>', 0)
+            ->get()
+            ->keyBy('id');
 
         if ($products->isEmpty()) {
             return redirect()->back()->with('warning', 'No products have cost prices set. Please update product cost prices first.');
