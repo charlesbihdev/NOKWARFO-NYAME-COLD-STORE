@@ -54,9 +54,15 @@ function CashNoteFormModal({ isOpen, onClose, onSubmit, title, submitLabel, data
                                     id={denom.key}
                                     type="number"
                                     min="0"
-                                    value={data[denom.key]}
-                                    onChange={(e) => setData(denom.key, parseInt(e.target.value) || 0)}
+                                    value={data[denom.key] == null || data[denom.key] === 0 ? '' : Number(data[denom.key])}
+                                    onChange={(e) =>
+                                        setData(
+                                            denom.key,
+                                            e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0
+                                        )
+                                    }
                                     className="text-right"
+                                    placeholder=""
                                 />
                             </div>
                         ))}
