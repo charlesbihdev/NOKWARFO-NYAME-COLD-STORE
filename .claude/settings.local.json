@@ -4,7 +4,9 @@
       "Bash(grep:*)",
       "Bash(php artisan make:migration:*)",
       "Bash(vendor/bin/pint:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__laravel-boost__database-schema",
+      "Bash(ls:*)"
     ]
   }
 }
