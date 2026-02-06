@@ -13,6 +13,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfitAnalysisController;
 use App\Http\Controllers\SalesTransactionController;
+use App\Http\Controllers\SavingsController;
 use App\Http\Controllers\StockControlController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TripEstimationController;
@@ -92,7 +93,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/customers/{customer}/debts/{debt}', [CustomerController::class, 'destroyDebt'])->name('customers.debts.destroy');
     Route::get('/customers/{customer}/summary', [CustomerController::class, 'getTransactionSummary'])->name('customers.summary');
     Route::patch('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
+
+    // Savings feature routes
+    Route::resource('savings', SavingsController::class)->except(['destroy']);
+    Route::patch('/savings/{saving}/archive', [SavingsController::class, 'archive'])->name('savings.archive');
+    Route::post('/savings/{saving}/transactions', [SavingsController::class, 'storeTransaction'])->name('savings.transactions.store');
+    Route::put('/savings/transactions/{transaction}', [SavingsController::class, 'updateTransaction'])->name('savings.transactions.update');
+    Route::delete('/savings/transactions/{transaction}', [SavingsController::class, 'destroyTransaction'])->name('savings.transactions.destroy');
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';

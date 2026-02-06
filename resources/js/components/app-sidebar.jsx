@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
-import { Banknote, BarChart3, CreditCard, Home, Menu, Package, ShoppingCart, TrendingUp, Truck, Users, MapPin, Receipt, Wallet } from 'lucide-react';
+import { Banknote, BarChart3, CreditCard, Home, Menu, Package, PiggyBank, ShoppingCart, TrendingUp, Truck, Users, MapPin, Receipt, Wallet } from 'lucide-react';
 
 const menuItems = [
     { id: 'dashboard.index', label: 'Dashboard', icon: Home, section: 'main' },
@@ -17,6 +17,7 @@ const menuItems = [
     { id: 'credit-collection.index', label: 'Credit Collection', icon: CreditCard, section: 'financial' },
     { id: 'expenses.index', label: 'Expenses', icon: Receipt, section: 'financial' },
     { id: 'profit-analysis.index', label: 'Profit Analysis', icon: TrendingUp, section: 'financial' },
+    { id: 'savings.index', label: 'Savings', icon: PiggyBank, section: 'financial' },
     { id: 'bank-transfers.index', label: 'Bank Transfers', icon: Banknote, section: 'financial' },
     { id: 'cash-notes.index', label: 'Cash Notes', icon: Wallet, section: 'financial' },
 ];
@@ -63,7 +64,8 @@ function AppSidebar({ isCollapsed, setIsCollapsed }) {
                                                 isCollapsed ? 'justify-center' : 'justify-start',
                                                 route().current(item.id) || 
                                                 (item.id === 'customers.index' && route().current('customers.*')) ||
-                                                (item.id === 'suppliers.index' && route().current('suppliers.*'))
+                                                (item.id === 'suppliers.index' && route().current('suppliers.*')) ||
+                                                (item.id === 'savings.index' && route().current('savings.*'))
                                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                                     : 'text-gray-700 hover:bg-gray-100',
                                             )}

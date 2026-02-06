@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import AddTransactionModal from '../components/sales/AddTransactionmodal';
+import AddTransactionModal from '../components/sales/AddTransactionModal';
 import EditSaleModal from '../components/sales/EditSaleModal';
-import SalesTable from '../components/sales/salesTable';
+import SalesTable from '../components/sales/SalesTable';
 import InstantPaymentReceipt from '../components/sales/InstantPaymentReceipt';
 import CreditReceipt from '../components/sales/CreditReceipt';
 
