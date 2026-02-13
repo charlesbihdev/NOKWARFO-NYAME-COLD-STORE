@@ -242,15 +242,19 @@ class SupplierCreditService
     {
         $transactionsQuery = $supplier->creditTransactions();
         $paymentsQuery = $supplier->payments();
+        $debtsQuery = $supplier->debts();
 
         // Apply date filters if provided
         if ($startDate && $endDate) {
             $transactionsQuery->whereBetween('transaction_date', [$startDate, $endDate]);
             $paymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
+            $debtsQuery->whereBetween('debt_date', [$startDate, $endDate]);
         }
 
         $transactions = $transactionsQuery->orderByDesc('transaction_date')->get();
-        $totalOwed = $transactionsQuery->sum('amount_owed');
+        $historicalDebt = $debtsQuery->sum('amount');
+        $transactionDebt = $transactionsQuery->sum('amount_owed');
+        $totalOwed = $historicalDebt + $transactionDebt;
         $totalPayments = $paymentsQuery->sum('payment_amount');
         $totalOutstanding = max(0, $totalOwed - $totalPayments);
 
