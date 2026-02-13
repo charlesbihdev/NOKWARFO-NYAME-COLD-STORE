@@ -6,7 +6,9 @@
       "Bash(vendor/bin/pint:*)",
       "Bash(npm run build:*)",
       "mcp__laravel-boost__database-schema",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "mcp__laravel-boost__database-query",
+      "Bash(php:*)"
     ]
   }
 }
