@@ -11,10 +11,10 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
     const [items, setItems] = useState([{
         product_id: null,
         product_name: '',
-        cartons: 0,
-        lines: 0,
+        cartons: '',
+        lines: '',
         lines_per_carton: 1,
-        unit_price: 0
+        unit_price: ''
     }]);
 
     const { data, setData, post, processing, reset } = useForm({
@@ -35,10 +35,10 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
             setItems([{
                 product_id: null,
                 product_name: '',
-                cartons: 0,
-                lines: 0,
+                cartons: '',
+                lines: '',
                 lines_per_carton: 1,
-                unit_price: 0
+                unit_price: ''
             }]);
             setData({
                 supplier_id: supplier?.id || '',
@@ -62,10 +62,10 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
         setItems([...items, {
             product_id: null,
             product_name: '',
-            cartons: 0,
-            lines: 0,
+            cartons: '',
+            lines: '',
             lines_per_carton: 1,
-            unit_price: 0
+            unit_price: ''
         }]);
     }
 
@@ -224,7 +224,7 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                         type="number"
                                         min="0"
                                         value={item.cartons}
-                                        onChange={(e) => updateItem(index, 'cartons', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateItem(index, 'cartons', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                                     />
                                     {errors[`items.${index}.cartons`] && (
                                         <div className="mt-1 text-xs text-red-500">{errors[`items.${index}.cartons`]}</div>
@@ -238,7 +238,7 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                         type="number"
                                         min="0"
                                         value={item.lines}
-                                        onChange={(e) => updateItem(index, 'lines', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => updateItem(index, 'lines', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                                     />
                                     {errors[`items.${index}.lines`] && (
                                         <div className="mt-1 text-xs text-red-500">{errors[`items.${index}.lines`]}</div>
@@ -252,7 +252,7 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                         type="number"
                                         min="1"
                                         value={item.lines_per_carton}
-                                        onChange={(e) => updateItem(index, 'lines_per_carton', parseInt(e.target.value) || 1)}
+                                        onChange={(e) => updateItem(index, 'lines_per_carton', e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
                                         disabled={item.product_id !== null}
                                         className={item.product_id !== null ? 'bg-gray-100' : ''}
                                     />
@@ -269,7 +269,7 @@ export default function AddTransactionModal({ isOpen, onClose, supplier, product
                                         min="0"
                                         step="0.01"
                                         value={item.unit_price}
-                                        onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => updateItem(index, 'unit_price', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                                         required
                                     />
                                     {errors[`items.${index}.unit_price`] && (

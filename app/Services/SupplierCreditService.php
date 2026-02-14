@@ -161,6 +161,22 @@ class SupplierCreditService
 
         $totalPreviousDebt = $debtQuery->sum('amount_owed');
 
+        // Include historical debts (supplier_debts) that occurred before this transaction
+        $historicalDebtQuery = $transaction->supplier->debts()
+            ->where(function ($query) use ($transaction) {
+                $query->where('debt_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('debt_date', '=', $transaction->transaction_date)
+                            ->where('created_at', '<', $transaction->created_at);
+                    });
+            });
+
+        if ($startDate && $endDate) {
+            $historicalDebtQuery->whereBetween('debt_date', [$startDate, $endDate]);
+        }
+
+        $totalPreviousDebt += $historicalDebtQuery->sum('amount');
+
         // Get total payments made before this transaction date
         // Compare by payment_date first, then created_at if dates are equal
         $paymentsQuery = $transaction->supplier->payments()
@@ -179,7 +195,7 @@ class SupplierCreditService
 
         $totalPreviousPayments = $paymentsQuery->sum('payment_amount');
 
-        // Previous debt = Total debt from transactions - Total payments made
+        // Previous debt = Total debt from transactions + historical debts - Total payments made
         return max(0, $totalPreviousDebt - $totalPreviousPayments);
     }
 
@@ -230,6 +246,23 @@ class SupplierCreditService
         }
 
         $totalDebtUpToDate = $debtQuery->sum('amount_owed');
+
+        // Include historical debts up to and including this transaction date
+        $historicalDebtQuery = $transaction->supplier->debts()
+            ->where(function ($query) use ($transaction) {
+                $query->where('debt_date', '<', $transaction->transaction_date)
+                    ->orWhere(function ($q) use ($transaction) {
+                        $q->where('debt_date', '=', $transaction->transaction_date)
+                            ->where('created_at', '<=', $transaction->created_at);
+                    });
+            });
+
+        if ($startDate && $endDate) {
+            $historicalDebtQuery->whereBetween('debt_date', [$startDate, $endDate]);
+        }
+
+        $totalDebtUpToDate += $historicalDebtQuery->sum('amount');
+
         $totalPaymentsUpToDate = $paymentsQuery->sum('payment_amount');
 
         return max(0, $totalDebtUpToDate - $totalPaymentsUpToDate);
@@ -426,6 +459,22 @@ class SupplierCreditService
         }
 
         $totalDebt = $debtQuery->sum('amount_owed');
+
+        // Include historical debts up to and including this payment date
+        $historicalDebtQuery = $payment->supplier->debts()
+            ->where(function ($query) use ($payment) {
+                $query->where('debt_date', '<', $payment->payment_date)
+                    ->orWhere(function ($q) use ($payment) {
+                        $q->where('debt_date', '=', $payment->payment_date)
+                            ->where('created_at', '<=', $payment->created_at);
+                    });
+            });
+
+        if ($startDate && $endDate) {
+            $historicalDebtQuery->whereBetween('debt_date', [$startDate, $endDate]);
+        }
+
+        $totalDebt += $historicalDebtQuery->sum('amount');
 
         // Get payments made BEFORE this payment
         // Compare by payment_date first, then created_at if dates are equal
