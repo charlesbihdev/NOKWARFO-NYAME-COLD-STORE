@@ -364,7 +364,7 @@ function SupplierTransactions({ supplier, transactions, payments = [], debts = [
                                         ...debt,
                                         type: 'historical_debt',
                                         sortDate: parseLocalDate(debt.date) || new Date(),
-                                        sortCreatedAt: new Date(),
+                                        sortCreatedAt: new Date(debt.created_at),
                                     });
                                 });
 

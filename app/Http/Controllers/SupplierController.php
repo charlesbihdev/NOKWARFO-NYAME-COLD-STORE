@@ -441,6 +441,7 @@ class SupplierController extends Controller
                     'amount' => $debt->amount,
                     'description' => $debt->description ?? 'Historical debt',
                     'notes' => $debt->notes,
+                    'created_at' => $debt->created_at,
                 ];
             });
 
