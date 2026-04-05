@@ -280,12 +280,41 @@ class StockControlTest extends TestCase
         $date = '2025-10-01';
         $service = new StockCalculationService;
 
-        // Actual movement: 30
-        $this->addReceived($product, $date.' 12:00:00', 30);
-        // Snapshot override: 50
+        // Actual movement BEFORE snapshot: 30 (will be replaced by snapshot)
+        $this->addReceived($product, $date.' 08:00:00', 30);
+        // Snapshot override: 50 (corrects the received total)
         DailyStockSnapshot::create(['product_id' => $product->id, 'date' => $date, 'received_today' => 50]);
 
         $this->assertSame(50, $service->getReceivedToday($product, $date));
+    }
+
+    public function test_stock_additions_after_received_today_snapshot_are_counted(): void
+    {
+        // Snapshot sets received_today=20 (correction).
+        // Client then adds 10 more units AFTER the snapshot.
+        // Expected: getReceivedToday() = 20 + 10 = 30
+        $product = $this->makeProduct(['lines_per_carton' => 1]);
+        $date = '2025-10-01';
+
+        // Create snapshot first (simulating an earlier timestamp)
+        $snap = DailyStockSnapshot::create(['product_id' => $product->id, 'date' => $date, 'received_today' => 20]);
+
+        // Add received movement AFTER the snapshot
+        $movement = StockMovement::create(['product_id' => $product->id, 'type' => 'received', 'quantity' => 10]);
+        $movement->created_at = $date.' 15:00:00';
+        $movement->save();
+
+        // Push snapshot's updated_at to before the movement so the movement counts
+        $snap->updated_at = $date.' 10:00:00';
+        $snap->saveQuietly();
+
+        $service = new StockCalculationService;
+        $this->assertSame(30, $service->getReceivedToday($product, $date));
+
+        // Also verify the summary total_available_raw reflects it
+        $summary = $service->computeSummaryForDate($product, $date);
+        $this->assertSame(30, $summary['received_today_raw']);
+        $this->assertSame(30, $summary['total_available_raw']); // 0 available + 30 received
     }
 
     public function test_received_today_falls_back_to_movements_when_no_snapshot(): void
