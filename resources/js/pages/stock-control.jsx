@@ -26,7 +26,7 @@ export default function StockControl({ stock_movements = [], products = [], stoc
         date: new Date().toISOString().split('T')[0],
     });
 
-    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedDate, setSelectedDate] = useState(date ?? '');
     const breadcrumbs = [{ title: 'Stock Control', href: '/stock-control' }];
 
     function openAddStock(product) {

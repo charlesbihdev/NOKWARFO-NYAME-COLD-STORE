@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,6 +44,13 @@ class ProfitCalculationTest extends TestCase
         ]);
     }
 
+    private function addReceivedStock(Product $product, int $quantity, ?string $date = null): void
+    {
+        $m = StockMovement::create(['product_id' => $product->id, 'type' => 'received', 'quantity' => $quantity]);
+        $m->created_at = ($date ?? now()->toDateString()).' 09:00:00';
+        $m->save();
+    }
+
     public function test_profit_is_calculated_on_sale_creation(): void
     {
         $user = $this->makeUser();
@@ -55,6 +63,7 @@ class ProfitCalculationTest extends TestCase
         ]);
 
         $customer = $this->makeCustomer();
+        $this->addReceivedStock($product, 100);
 
         // Sell 1 carton (10 lines) at 150/carton = 15/line
         $response = $this->post(route('sales-transactions.store'), [
@@ -98,6 +107,7 @@ class ProfitCalculationTest extends TestCase
         ]);
 
         $customer = $this->makeCustomer();
+        $this->addReceivedStock($product, 100);
 
         $response = $this->post(route('sales-transactions.store'), [
             'customer_id' => $customer->id,
@@ -137,6 +147,7 @@ class ProfitCalculationTest extends TestCase
         ]);
 
         $customer = $this->makeCustomer();
+        $this->addReceivedStock($product, 100);
 
         // Sell 2 cartons + 2 lines = 10 lines total at 100/carton = 25/line
         $response = $this->post(route('sales-transactions.store'), [
