@@ -5,7 +5,7 @@ export default function InventoryTable({ products, onAddStock, onAdjustStock }) 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Product Inventoryyyy</CardTitle>
+                <CardTitle>Product Inventory</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
