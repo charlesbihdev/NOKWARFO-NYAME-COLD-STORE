@@ -157,14 +157,24 @@ class StockCalculationService
      * Stock Received Today for a product on a given date.
      *
      * Priority:
-     *   1. Snapshot with received_today set → use it directly.
+     *   1. Snapshot with received_today set → use as base, then add any received
+     *      movements created AFTER the snapshot was last saved (real new arrivals).
      *   2. Otherwise → sum of 'received' type stock_movements on that date.
      */
     public function getReceivedToday(Product $product, string $date): int
     {
         $snap = $this->findSnapshot($product->id, $date);
         if ($snap && $snap->received_today !== null) {
-            return $snap->received_today;
+            // Snapshot corrects/replaces whatever was received up to that point.
+            // Any received movements added AFTER the snapshot was last saved are
+            // real new arrivals that must be counted on top.
+            $additionalAfterSnapshot = (int) $product->stockMovements()
+                ->whereDate('created_at', $date)
+                ->where('type', 'received')
+                ->where('created_at', '>', $snap->updated_at)
+                ->sum('quantity');
+
+            return $snap->received_today + $additionalAfterSnapshot;
         }
 
         return (int) $product->stockMovements()
